@@ -8,14 +8,18 @@ struct CompactOverviewProviderCardModel {
         let identityText: String
         let planText: String?
         let statusText: String?
-        let metrics: [UsageMenuCardView.Model.Metric]
+        let weeklyMetric: UsageMenuCardView.Model.Metric?
+        let weeklyDetails: [UsageMenuCardView.Model.Metric]
+
+        var metrics: [UsageMenuCardView.Model.Metric] {
+            [self.weeklyMetric].compactMap(\.self) + self.weeklyDetails
+        }
     }
 
     let provider: UsageProvider
     let providerName: String
     let updatedText: String
     let accounts: [Account]
-    let dashboard: InlineUsageDashboardModel?
     let progressColor: Color
     let heightFingerprint: String
 
@@ -27,20 +31,19 @@ struct CompactOverviewProviderCardModel {
         self.providerName = providerModel.providerName
         self.updatedText = providerModel.subtitleText
         self.accounts = accountModels.map { account in
-            Account(
+            let metrics = Self.visibleMetrics(for: account.model)
+            return Account(
                 id: account.id,
                 identityText: Self.accountIdentityText(account.model),
                 planText: account.model.planText,
                 statusText: Self.accountStatusText(account.model),
-                metrics: Self.visibleMetrics(for: account.model))
+                weeklyMetric: metrics.first,
+                weeklyDetails: Array(metrics.dropFirst()))
         }
-        self.dashboard = Self.displayDashboard(
-            providerDashboard: providerModel.inlineUsageDashboard,
-            accountModels: accountModels.map(\.model))
         self.progressColor = providerModel.progressColor
         self.heightFingerprint = accountModels.map { account in
             "\(account.id):\(account.model.heightFingerprint(section: "compact-overview-account"))"
-        }.joined(separator: "|") + "|dashboard=\(providerModel.inlineUsageDashboard == nil ? 0 : 1)"
+        }.joined(separator: "|")
     }
 
     static func visibleMetrics(
@@ -50,9 +53,9 @@ struct CompactOverviewProviderCardModel {
         case .codex:
             model.metrics.filter { $0.id == "secondary" }
         case .claude:
-            model.metrics.filter { metric in
-                metric.id == "primary" || metric.id == "secondary" || Self.isFableOnly(metric)
-            }
+            model.metrics.filter { $0.id == "secondary" } +
+                model.metrics.filter { $0.id == "primary" } +
+                model.metrics.filter(self.isFableOnly)
         default:
             model.metrics
         }
@@ -77,23 +80,6 @@ struct CompactOverviewProviderCardModel {
             self.visibleMetrics(for: model).isEmpty ? model.placeholder : nil
         }
     }
-
-    private static func displayDashboard(
-        providerDashboard: InlineUsageDashboardModel?,
-        accountModels: [UsageMenuCardView.Model]) -> InlineUsageDashboardModel?
-    {
-        guard let dashboard = providerDashboard ?? accountModels.compactMap(\.inlineUsageDashboard).first else {
-            return nil
-        }
-        return InlineUsageDashboardModel(
-            accessibilityLabel: dashboard.accessibilityLabel,
-            valueStyle: dashboard.valueStyle,
-            kpis: dashboard.kpis,
-            points: dashboard.points,
-            detailLines: [],
-            barColor: dashboard.barColor,
-            currencyCode: dashboard.currencyCode)
-    }
 }
 
 struct CompactOverviewProviderCardView: View {
@@ -116,13 +102,6 @@ struct CompactOverviewProviderCardView: View {
             }
             .padding(.horizontal, UsageMenuCardLayout.horizontalPadding)
             .padding(.vertical, 8)
-
-            if let dashboard = self.model.dashboard {
-                Divider()
-                InlineUsageDashboardContent(model: dashboard, chartHeight: 42)
-                    .padding(.horizontal, UsageMenuCardLayout.horizontalPadding)
-                    .padding(.vertical, 10)
-            }
         }
         .frame(width: self.width, alignment: .leading)
     }
@@ -178,8 +157,18 @@ struct CompactOverviewProviderCardView: View {
                     .lineLimit(2)
             }
 
-            ForEach(account.metrics) { metric in
-                self.metric(metric)
+            if let weeklyMetric = account.weeklyMetric {
+                self.metric(weeklyMetric, isWeeklyDetail: false)
+            } else if !account.weeklyDetails.isEmpty {
+                Text(L("Weekly"))
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(MenuHighlightStyle.primary(self.isHighlighted))
+            }
+
+            ForEach(account.weeklyDetails) { metric in
+                self.metric(metric, isWeeklyDetail: true)
+                    .padding(.leading, 10)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -187,15 +176,18 @@ struct CompactOverviewProviderCardView: View {
         .accessibilityLabel(account.identityText)
     }
 
-    private func metric(_ metric: UsageMenuCardView.Model.Metric) -> some View {
-        let tint = CompactOverviewProviderCardModel.isFableOnly(metric)
+    private func metric(
+        _ metric: UsageMenuCardView.Model.Metric,
+        isWeeklyDetail: Bool) -> some View
+    {
+        let tint = self.model.provider == .claude && isWeeklyDetail
             ? Color(nsColor: .systemYellow)
             : self.model.progressColor
         return VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .firstTextBaseline, spacing: 5) {
                 Text(metric.title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
+                    .font(isWeeklyDetail ? .caption : .subheadline)
+                    .fontWeight(isWeeklyDetail ? .regular : .medium)
                     .foregroundStyle(MenuHighlightStyle.primary(self.isHighlighted))
                     .lineLimit(1)
                 if metric.statusText == nil {

@@ -171,4 +171,40 @@ final class StatusMenuClaudeSwapCompactTests: XCTestCase {
         XCTAssertTrue(controller.compactAccountExpandedIDs.isEmpty)
         XCTAssertTrue(controller.compactAccountExpandedHealthyTailProviders.isEmpty)
     }
+
+    func test_compactOverviewIncludesEveryClaudeSwapAccount() throws {
+        let accounts = [1, 2].map { slot in
+            ProviderAccountUsageSnapshot(
+                id: ProviderAccountIdentity(source: "claude-swap", opaqueID: String(slot)),
+                provider: .claude,
+                displayLabel: "unavailable-\(slot)@example.com",
+                isActive: slot == 1,
+                canActivate: false,
+                snapshot: nil,
+                error: "Usage unavailable",
+                sourceLabel: "claude-swap")
+        }
+        let (controller, store) = self.makeController(accounts: accounts)
+        defer { controller.releaseStatusItemsForTesting() }
+        CodexBarPersonalization.compactOverviewEnabledOverrideForTesting = true
+        defer { CodexBarPersonalization.compactOverviewEnabledOverrideForTesting = nil }
+        controller.settings.mergeIcons = true
+        let codexMetadata = try XCTUnwrap(ProviderRegistry.shared.metadata[.codex])
+        controller.settings.setProviderEnabled(provider: .codex, metadata: codexMetadata, enabled: true)
+        store.errors[.claude] = "All Claude accounts are unavailable"
+
+        let providerModel = try XCTUnwrap(controller.menuCardModel(for: .claude))
+        XCTAssertTrue(providerModel.isOverviewErrorOnly)
+        let compactModel = controller.compactOverviewProviderCardModel(
+            provider: .claude,
+            providerModel: providerModel)
+
+        XCTAssertEqual(compactModel.accounts.map(\.identityText), accounts.map(\.displayLabel))
+        XCTAssertEqual(compactModel.accounts.map(\.statusText), ["Usage unavailable", "Usage unavailable"])
+        XCTAssertTrue(compactModel.accounts.allSatisfy(\.metrics.isEmpty))
+
+        let menu = controller.makeMenu()
+        controller.menuWillOpen(menu)
+        XCTAssertTrue(self.representedIDs(in: menu).contains("overviewRow-claude"))
+    }
 }

@@ -105,7 +105,19 @@ struct UsageMenuCardLayoutTests {
                 .init(id: "1", label: "Mon", value: 4, accessibilityValue: "Monday: $4"),
                 .init(id: "2", label: "Tue", value: 12, accessibilityValue: "Tuesday: $12"),
             ],
-            detailLines: ["Top model: example", "Estimated from token usage"])
+            detailLines: ["Top model: example", "Estimated from token usage"],
+            currencyCode: "USD",
+            costAggregation: .init(
+                currencyCode: "USD",
+                historyDays: 30,
+                todayCost: 12,
+                historyCost: 16,
+                latestTokens: 100,
+                historyTokens: 1000,
+                points: [
+                    .init(id: "1", label: "Mon", value: 4, accessibilityValue: "Monday: $4"),
+                    .init(id: "2", label: "Tue", value: 12, accessibilityValue: "Tuesday: $12"),
+                ]))
         let codexMetrics = [
             Self.metric(id: "primary", title: "Session", percent: 80),
             Self.metric(id: "secondary", title: "Weekly", percent: 61),
@@ -155,16 +167,27 @@ struct UsageMenuCardLayoutTests {
 
         #expect(codexModel.accounts.allSatisfy { $0.metrics.map(\.id) == ["secondary"] })
         #expect(claudeModel.accounts.allSatisfy {
-            $0.metrics.map(\.id) == ["primary", "secondary", "claude-weekly-scoped-fable"]
+            $0.metrics.map(\.id) == ["secondary", "primary", "claude-weekly-scoped-fable"]
         })
-        #expect(codexModel.dashboard?.detailLines.isEmpty == true)
-        #expect(codexModel.dashboard?.points.map(\.value) == [4, 12])
+        #expect(claudeModel.accounts.allSatisfy { $0.weeklyMetric?.id == "secondary" })
+        #expect(claudeModel.accounts.allSatisfy {
+            $0.weeklyDetails.map(\.id) == ["primary", "claude-weekly-scoped-fable"]
+        })
+        let aggregateDashboard = try #require(CompactOverviewDashboard.aggregate([dashboard, dashboard]))
+        #expect(aggregateDashboard.detailLines.isEmpty)
+        #expect(aggregateDashboard.costAggregation?.todayCost == 24)
+        #expect(aggregateDashboard.costAggregation?.historyCost == 32)
+        #expect(aggregateDashboard.costAggregation?.latestTokens == 200)
+        #expect(aggregateDashboard.costAggregation?.historyTokens == 2000)
+        #expect(aggregateDashboard.points.map(\.value) == [8, 24])
 
         let width = StatusItemController.menuCardBaseWidth
         let preview = VStack(spacing: 0) {
             CompactOverviewProviderCardView(model: codexModel, width: width)
             Divider()
             CompactOverviewProviderCardView(model: claudeModel, width: width)
+            Divider()
+            CompactOverviewDashboardView(model: aggregateDashboard, width: width)
         }
         .frame(width: width)
         .background(Color(nsColor: .windowBackgroundColor))

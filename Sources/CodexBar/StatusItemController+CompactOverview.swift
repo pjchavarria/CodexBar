@@ -88,6 +88,22 @@ extension StatusItemController {
         return item
     }
 
+    func makeCompactOverviewDashboardItem(
+        _ dashboard: InlineUsageDashboardModel,
+        width: CGFloat) -> NSMenuItem
+    {
+        self.makeMenuCardItem(
+            CompactOverviewDashboardView(model: dashboard, width: width),
+            id: "compactOverviewDashboard",
+            width: width,
+            heightCacheScope: "compact-overview-dashboard",
+            heightCacheFingerprint: dashboard.kpis.map { "\($0.title)=\($0.value)" }.joined(separator: "|") +
+                "|points=\(dashboard.points.count)",
+            submenu: nil,
+            containsInteractiveControls: false,
+            usesGPUSelection: true)
+    }
+
     func compactOverviewProviderCardModel(
         provider: UsageProvider,
         providerModel: UsageMenuCardView.Model) -> CompactOverviewProviderCardModel
@@ -105,6 +121,24 @@ extension StatusItemController {
             accountModels: accountModels.isEmpty
                 ? [(id: provider.rawValue, model: providerModel)]
                 : accountModels)
+    }
+
+    func hasKnownCompactOverviewAccounts(for provider: UsageProvider) -> Bool {
+        switch provider {
+        case .codex:
+            return self.codexAccountMenuDisplay(for: .codex)?.accounts.isEmpty == false
+        case .claude:
+            if ClaudeSwapMenuPrecedence.prefersClaudeSwap(
+                provider: .claude,
+                accountCount: self.store.claudeSwapAccountSnapshots.count,
+                showSingleAccount: self.settings.claudeSwapShowSingleAccount)
+            {
+                return !self.store.claudeSwapAccountSnapshots.isEmpty
+            }
+            return self.tokenAccountMenuDisplay(for: .claude)?.accounts.isEmpty == false
+        default:
+            return false
+        }
     }
 
     private func compactOverviewCodexAccountModels(

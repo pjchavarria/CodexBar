@@ -22,6 +22,18 @@ struct InlineUsageDashboardModel: Equatable {
         case points
     }
 
+    /// Typed values retained until an overview-level aggregate has been built. Display text is
+    /// intentionally not used as an input because it has already lost currency and token precision.
+    struct CostAggregation: Equatable {
+        let currencyCode: String
+        let historyDays: Int
+        let todayCost: Double?
+        let historyCost: Double?
+        let latestTokens: Int?
+        let historyTokens: Int?
+        let points: [Point]
+    }
+
     let accessibilityLabel: String
     let valueStyle: ValueStyle
     let kpis: [KPI]
@@ -33,6 +45,27 @@ struct InlineUsageDashboardModel: Equatable {
     /// ISO 4217 currency code for cost dashboards. When non-nil, `MiniUsageBars` shows a max-cost scale label.
     /// Nil for token/points dashboards.
     var currencyCode: String?
+    var costAggregation: CostAggregation?
+
+    init(
+        accessibilityLabel: String,
+        valueStyle: ValueStyle,
+        kpis: [KPI],
+        points: [Point],
+        detailLines: [String],
+        barColor: Color? = nil,
+        currencyCode: String? = nil,
+        costAggregation: CostAggregation? = nil)
+    {
+        self.accessibilityLabel = accessibilityLabel
+        self.valueStyle = valueStyle
+        self.kpis = kpis
+        self.points = points
+        self.detailLines = detailLines
+        self.barColor = barColor
+        self.currencyCode = currencyCode
+        self.costAggregation = costAggregation
+    }
 }
 
 extension UsageMenuCardView.Model {
@@ -565,6 +598,14 @@ extension UsageMenuCardView.Model {
             points: points,
             detailLines: details)
         model.currencyCode = displayCurrencyCode
+        model.costAggregation = InlineUsageDashboardModel.CostAggregation(
+            currencyCode: displayCurrencyCode,
+            historyDays: historyDays,
+            todayCost: primaryCostUSD.map(convertedValue),
+            historyCost: snapshot.last30DaysCostUSD.map(convertedValue),
+            latestTokens: latest?.totalTokens,
+            historyTokens: snapshot.last30DaysTokens,
+            points: points)
         return model
     }
 
@@ -645,6 +686,14 @@ extension UsageMenuCardView.Model {
             points: points,
             detailLines: details)
         model.currencyCode = displayCurrencyCode
+        model.costAggregation = InlineUsageDashboardModel.CostAggregation(
+            currencyCode: displayCurrencyCode,
+            historyDays: 30,
+            todayCost: convertedValue(today.costUSD),
+            historyCost: convertedValue(last30.costUSD),
+            latestTokens: today.totalTokens,
+            historyTokens: last30.totalTokens,
+            points: points)
         return model
     }
 
@@ -891,7 +940,7 @@ extension UsageMenuCardView.Model {
         UsageFormatter.currencyString(value, currencyCode: currencyCode)
     }
 
-    private static func costValueStyle(currencyCode: String) -> InlineUsageDashboardModel.ValueStyle {
+    static func costValueStyle(currencyCode: String) -> InlineUsageDashboardModel.ValueStyle {
         if currencyCode == "USD" {
             return .currencyUSD
         }

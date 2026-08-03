@@ -4,10 +4,19 @@ import Foundation
 /// Fork-owned presentation choices kept behind one seam so upstream updates stay easy to merge.
 @MainActor
 enum CodexBarPersonalization {
+    #if DEBUG
+    static var compactOverviewEnabledOverrideForTesting: Bool?
+    #endif
+
     /// The fork replaces the merged provider switcher with a compact, overview-only menu.
     /// Tests keep the upstream interaction model unless they exercise the compact view directly.
     static var compactOverviewEnabled: Bool {
-        !SettingsStore.isRunningTests
+        #if DEBUG
+        if let override = self.compactOverviewEnabledOverrideForTesting {
+            return override
+        }
+        #endif
+        return !SettingsStore.isRunningTests
     }
 
     nonisolated static func usesCompactOverview(

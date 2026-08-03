@@ -13,12 +13,12 @@ future upstream changes can be merged with minimal conflict.
 **Status:** Active
 
 The merged menu is an overview-only surface at the existing 310-point width. It has no provider tab strip. Codex and
-Claude accounts stack vertically within their provider section, followed by one shared history chart representing the
-provider's accounts. Use the authoritative provider dashboard when it already has that scope; otherwise combine typed
-account history before display formatting. Never sum rendered chart values independently of KPIs, currency, or
-accessibility text.
+Claude accounts stack vertically within their provider section. No account or provider owns a usage dashboard; one
+combined cost/token dashboard appears after every provider section. Combine typed usage values before display
+formatting so KPIs, currency, chart points, and accessibility text remain one consistent aggregate.
 
-Codex accounts show Weekly only. Claude accounts show Session, Weekly, and Fable only; Fable uses a yellow treatment.
-The dashboard keeps its KPI values and graph but omits explanatory detail lines such as top-model and estimated-bill
-copy. Compact account fan-out is limited to Codex and Claude; provider-specific credentials, actions, and the menu-bar
-visualization remain outside this personalization.
+Codex accounts show Weekly only. Each Claude account has one Weekly group: Weekly is the main bar, with Session and
+Fable nested beneath it; Session and Fable use yellow treatments. The bottom dashboard keeps the four cost/token KPIs
+and graph but omits explanatory detail lines such as top-model and estimated-bill copy. Compact account fan-out is
+limited to Codex and Claude; provider-specific credentials, actions, and the menu-bar visualization remain outside
+this personalization.

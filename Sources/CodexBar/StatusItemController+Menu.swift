@@ -566,7 +566,9 @@ extension StatusItemController {
         let rows: [(provider: UsageProvider, model: UsageMenuCardView.Model)] = overviewProviders
             .compactMap { provider in
                 guard let model = self.menuCardModel(for: provider) else { return nil }
-                guard !model.isOverviewErrorOnly else { return nil }
+                guard !model.isOverviewErrorOnly ||
+                    usesCompactOverview && self.hasKnownCompactOverviewAccounts(for: provider)
+                else { return nil }
                 return (provider: provider, model: model)
             }
         guard !rows.isEmpty else { return false }
@@ -594,6 +596,12 @@ extension StatusItemController {
             if index < rows.count - 1 {
                 menu.addItem(.separator())
             }
+        }
+        if usesCompactOverview,
+           let dashboard = CompactOverviewDashboard.aggregate(rows.compactMap(\.model.inlineUsageDashboard))
+        {
+            menu.addItem(.separator())
+            menu.addItem(self.makeCompactOverviewDashboardItem(dashboard, width: menuWidth))
         }
         return true
     }
