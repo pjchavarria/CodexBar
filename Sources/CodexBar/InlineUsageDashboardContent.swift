@@ -936,10 +936,12 @@ extension UsageMenuCardView.Model {
 
 struct InlineUsageDashboardContent: View {
     private let model: InlineUsageDashboardModel
+    private let chartHeight: CGFloat
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
-    init(model: InlineUsageDashboardModel) {
+    init(model: InlineUsageDashboardModel, chartHeight: CGFloat = 58) {
         self.model = model
+        self.chartHeight = chartHeight
     }
 
     var body: some View {
@@ -947,7 +949,7 @@ struct InlineUsageDashboardContent: View {
             self.kpis
             if !self.model.points.isEmpty {
                 MiniUsageBars(model: self.model)
-                    .frame(height: 58)
+                    .frame(height: self.chartHeight)
                     .accessibilityLabel(self.model.accessibilityLabel)
             }
             self.detailLines

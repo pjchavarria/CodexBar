@@ -90,23 +90,204 @@ struct UsageMenuCardLayoutTests {
             UsageMenuCardLayout.sectionBottomPadding)
     }
 
+    @Test
+    func `compact overview keeps the requested quota rows and fixed menu width`() throws {
+        let dashboard = InlineUsageDashboardModel(
+            accessibilityLabel: "30 day usage",
+            valueStyle: .currencyUSD,
+            kpis: [
+                .init(title: "Today", value: "$12.40", emphasis: true),
+                .init(title: "30d", value: "$93.70", emphasis: false),
+                .init(title: "Latest tokens", value: "2.7B", emphasis: false),
+                .init(title: "30d tokens", value: "5B", emphasis: false),
+            ],
+            points: [
+                .init(id: "1", label: "Mon", value: 4, accessibilityValue: "Monday: $4"),
+                .init(id: "2", label: "Tue", value: 12, accessibilityValue: "Tuesday: $12"),
+            ],
+            detailLines: ["Top model: example", "Estimated from token usage"])
+        let codexMetrics = [
+            Self.metric(id: "primary", title: "Session", percent: 80),
+            Self.metric(id: "secondary", title: "Weekly", percent: 61),
+            Self.metric(id: "codex-spark-weekly", title: "Codex Spark Weekly", percent: 100),
+            Self.metric(id: "code-review", title: "Code review", percent: 66),
+        ]
+        let claudeMetrics = [
+            Self.metric(id: "primary", title: "Session", percent: 92),
+            Self.metric(id: "secondary", title: "Weekly", percent: 38),
+            Self.metric(id: "claude-weekly-scoped-fable", title: "Fable only", percent: 23),
+            Self.metric(id: "claude-routines", title: "Routines", percent: 50),
+        ]
+        let codexAccount = Self.model(
+            provider: .codex,
+            email: "Personal",
+            planText: "Pro 20x",
+            metrics: codexMetrics,
+            dashboard: dashboard)
+        let claudeAccount = Self.model(
+            provider: .claude,
+            email: "Personal",
+            planText: "Max 20x",
+            metrics: claudeMetrics,
+            dashboard: dashboard)
+        let codexModel = CompactOverviewProviderCardModel(
+            providerModel: codexAccount,
+            accountModels: [
+                (id: "codex-personal", model: codexAccount),
+                (id: "codex-work", model: Self.model(
+                    provider: .codex,
+                    email: "Work",
+                    planText: "Team 10x",
+                    metrics: codexMetrics,
+                    dashboard: dashboard)),
+            ])
+        let claudeModel = CompactOverviewProviderCardModel(
+            providerModel: claudeAccount,
+            accountModels: [
+                (id: "claude-personal", model: claudeAccount),
+                (id: "claude-work", model: Self.model(
+                    provider: .claude,
+                    email: "Work",
+                    planText: "Team 5x",
+                    metrics: claudeMetrics,
+                    dashboard: dashboard)),
+            ])
+
+        #expect(codexModel.accounts.allSatisfy { $0.metrics.map(\.id) == ["secondary"] })
+        #expect(claudeModel.accounts.allSatisfy {
+            $0.metrics.map(\.id) == ["primary", "secondary", "claude-weekly-scoped-fable"]
+        })
+        #expect(codexModel.dashboard?.detailLines.isEmpty == true)
+        #expect(codexModel.dashboard?.points.map(\.value) == [4, 12])
+
+        let width = StatusItemController.menuCardBaseWidth
+        let preview = VStack(spacing: 0) {
+            CompactOverviewProviderCardView(model: codexModel, width: width)
+            Divider()
+            CompactOverviewProviderCardView(model: claudeModel, width: width)
+        }
+        .frame(width: width)
+        .background(Color(nsColor: .windowBackgroundColor))
+        let controller = NSHostingController(rootView: preview)
+        let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
+
+        #expect(abs(size.width - width) < Self.heightTolerance)
+        #expect(size.height > 0)
+        try Self.writeSnapshotIfRequested(preview, size: size)
+    }
+
+    @Test
+    func `compact overview routing is limited to merged multi-provider menus`() {
+        #expect(CodexBarPersonalization.usesCompactOverview(
+            featureEnabled: true,
+            mergeIcons: true,
+            enabledProviderCount: 2))
+        #expect(!CodexBarPersonalization.usesCompactOverview(
+            featureEnabled: true,
+            mergeIcons: true,
+            enabledProviderCount: 1))
+        #expect(!CodexBarPersonalization.usesCompactOverview(
+            featureEnabled: true,
+            mergeIcons: false,
+            enabledProviderCount: 2))
+        #expect(!CodexBarPersonalization.usesCompactOverview(
+            featureEnabled: false,
+            mergeIcons: true,
+            enabledProviderCount: 2))
+        #expect(CodexBarPersonalization.needsAllAccounts(
+            featureEnabled: false,
+            mergeIcons: false,
+            enabledProviderCount: 1,
+            providerSupportsCompactAccounts: false,
+            usesStackedLayout: true))
+        #expect(!CodexBarPersonalization.needsAllAccounts(
+            featureEnabled: true,
+            mergeIcons: true,
+            enabledProviderCount: 1,
+            providerSupportsCompactAccounts: true,
+            usesStackedLayout: false))
+        #expect(CodexBarPersonalization.supportsCompactAccounts(for: .codex))
+        #expect(CodexBarPersonalization.supportsCompactAccounts(for: .claude))
+        #expect(!CodexBarPersonalization.supportsCompactAccounts(for: .openai))
+        #expect(!CodexBarPersonalization.needsAllAccounts(
+            featureEnabled: true,
+            mergeIcons: true,
+            enabledProviderCount: 2,
+            providerSupportsCompactAccounts: false,
+            usesStackedLayout: false))
+        #expect(CodexBarPersonalization.needsAllAccounts(
+            featureEnabled: true,
+            mergeIcons: true,
+            enabledProviderCount: 2,
+            providerSupportsCompactAccounts: false,
+            usesStackedLayout: true))
+    }
+
+    private static func metric(
+        id: String,
+        title: String,
+        percent: Double) -> UsageMenuCardView.Model.Metric
+    {
+        UsageMenuCardView.Model.Metric(
+            id: id,
+            title: title,
+            percent: percent,
+            percentStyle: .left,
+            resetText: "Resets in 2d 6h",
+            detailText: nil,
+            detailLeftText: nil,
+            detailRightText: nil,
+            pacePercent: nil,
+            paceOnTop: true)
+    }
+
+    private static func writeSnapshotIfRequested(
+        _ view: some View,
+        size: CGSize) throws
+    {
+        guard let path = ProcessInfo.processInfo.environment["CODEXBAR_COMPACT_OVERVIEW_SNAPSHOT_PATH"] else {
+            return
+        }
+        let hostingView = NSHostingView(rootView: view)
+        hostingView.appearance = NSAppearance(named: .darkAqua)
+        hostingView.frame = NSRect(origin: .zero, size: size)
+        hostingView.layoutSubtreeIfNeeded()
+        guard let bitmap = hostingView.bitmapImageRepForCachingDisplay(in: hostingView.bounds) else {
+            throw SnapshotError.bitmapUnavailable
+        }
+        hostingView.cacheDisplay(in: hostingView.bounds, to: bitmap)
+        guard let data = bitmap.representation(using: .png, properties: [:]) else {
+            throw SnapshotError.pngUnavailable
+        }
+        try data.write(to: URL(fileURLWithPath: path), options: .atomic)
+    }
+
+    private enum SnapshotError: Error {
+        case bitmapUnavailable
+        case pngUnavailable
+    }
+
     private static func model(
+        provider: UsageProvider = .codex,
+        email: String = "steipete@gmail.com",
+        planText: String? = "Pro 20x",
         metrics: [UsageMenuCardView.Model.Metric] = [],
         usageNotes: [String] = [],
         creditsText: String? = nil,
-        placeholder: String? = nil) -> UsageMenuCardView.Model
+        placeholder: String? = nil,
+        dashboard: InlineUsageDashboardModel? = nil) -> UsageMenuCardView.Model
     {
         UsageMenuCardView.Model(
-            provider: .codex,
-            providerName: "Codex",
-            email: "steipete@gmail.com",
+            provider: provider,
+            providerName: provider == .claude ? "Claude" : "Codex",
+            email: email,
             subtitleText: "Not fetched yet",
             subtitleStyle: .info,
-            planText: "Pro 20x",
+            planText: planText,
             metrics: metrics,
             usageNotes: usageNotes,
             openAIAPIUsage: nil,
-            inlineUsageDashboard: nil,
+            inlineUsageDashboard: dashboard,
             creditsText: creditsText,
             creditsRemaining: nil,
             creditsProgressPercent: nil,

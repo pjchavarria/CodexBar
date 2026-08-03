@@ -54,7 +54,7 @@ extension StatusItemController {
         let accounts = self.settings.tokenAccounts(for: provider)
         guard accounts.count > 1 else { return nil }
         let activeIndex = self.settings.tokenAccountsData(for: provider)?.clampedActiveIndex() ?? 0
-        let showAll = self.settings.multiAccountMenuLayout == .stacked
+        let showAll = self.store.compactOverviewNeedsAllAccounts(for: provider)
         let displayAccounts = showAll
             ? self.store.limitedTokenAccounts(accounts, selected: self.settings.selectedTokenAccount(for: provider))
             : accounts
@@ -100,7 +100,7 @@ extension StatusItemController {
         guard provider == .codex else { return nil }
         guard let projection = self.settings.codexVisibleAccountProjectionForMenuDisplay else { return nil }
         guard projection.visibleAccounts.count > 1 else { return nil }
-        let showAll = self.settings.multiAccountMenuLayout == .stacked
+        let showAll = self.store.compactOverviewNeedsAllAccounts(for: .codex)
         let accounts = showAll
             ? self.store.limitedCodexVisibleAccounts(
                 projection.visibleAccounts,

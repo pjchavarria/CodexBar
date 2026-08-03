@@ -216,12 +216,12 @@ extension UsageStore {
     func shouldFetchAllTokenAccounts(provider: UsageProvider, accounts: [ProviderTokenAccount]) -> Bool {
         guard TokenAccountSupportCatalog.support(for: provider) != nil else { return false }
         guard self.settings.effectiveSelectedTokenAccount(for: provider) != nil else { return false }
-        return self.settings.multiAccountMenuLayout == .stacked && accounts.count > 1
+        return self.compactOverviewNeedsAllAccounts(for: provider) && accounts.count > 1
     }
 
     func shouldFetchAllCodexVisibleAccounts() -> Bool {
         let projection = self.freshCodexVisibleAccountProjectionForAccountRefresh()
-        return self.settings.multiAccountMenuLayout == .stacked &&
+        return self.compactOverviewNeedsAllAccounts(for: .codex) &&
             projection.visibleAccounts.count > 1
     }
 

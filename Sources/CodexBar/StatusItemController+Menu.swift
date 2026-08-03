@@ -239,11 +239,10 @@ extension StatusItemController {
 
         let enabledProviders = self.store.enabledProvidersForDisplay()
         let includesOverview = self.includesOverviewTab(enabledProviders: enabledProviders)
-        let switcherSelection = self.shouldMergeIcons && enabledProviders.count > 1
-            ? self.resolvedSwitcherSelection(
-                enabledProviders: enabledProviders,
-                includesOverview: includesOverview)
-            : nil
+        let usesCompactOverview = self.usesCompactOverview(enabledProviders: enabledProviders)
+        let switcherSelection = self.personalizedSwitcherSelection(
+            enabledProviders: enabledProviders,
+            includesOverview: includesOverview)
         let isOverviewSelected = switcherSelection == .overview
         let selectedProvider = if isOverviewSelected {
             self.resolvedMenuProvider(enabledProviders: enabledProviders)
@@ -266,8 +265,9 @@ extension StatusItemController {
         let descriptor = self.makeMenuDescriptor(
             provider: selectedProvider,
             includeContextualActions: !isOverviewSelected)
-        let menuWidth = self.menuCardWidth(
-            for: enabledProviders,
+        let menuWidth = self.personalizedMenuWidth(
+            usesCompactOverview: usesCompactOverview,
+            enabledProviders: enabledProviders,
             selectedProvider: selectedProvider,
             descriptor: descriptor)
 
@@ -505,6 +505,7 @@ extension StatusItemController {
         selection: ProviderSwitcherSelection,
         width: CGFloat)
     {
+        guard !self.usesCompactOverview(enabledProviders: enabledProviders) else { return }
         guard self.shouldMergeIcons, enabledProviders.count > 1 else { return }
         let switcherItem = self.makeProviderSwitcherItem(
             providers: enabledProviders,
@@ -556,8 +557,12 @@ extension StatusItemController {
         // Rows may be built into a detached scratch menu for in-place reconciliation;
         // interaction closures must always reference the live menu they end up serving.
         let interactionMenu = captureMenu ?? menu
-        let overviewProviders = self.settings.reconcileMergedOverviewSelectedProviders(
-            activeProviders: enabledProviders)
+        let usesCompactOverview = self.usesCompactOverview(enabledProviders: enabledProviders)
+        let overviewProviders = if usesCompactOverview {
+            Array(enabledProviders.prefix(Self.maxOverviewProviders))
+        } else {
+            self.settings.reconcileMergedOverviewSelectedProviders(activeProviders: enabledProviders)
+        }
         let rows: [(provider: UsageProvider, model: UsageMenuCardView.Model)] = overviewProviders
             .compactMap { provider in
                 guard let model = self.menuCardModel(for: provider) else { return nil }
@@ -576,26 +581,15 @@ extension StatusItemController {
                 provider: row.provider,
                 model: row.model,
                 width: menuWidth)
-            let item = self.makeMenuCardItem(
-                OverviewMenuCardRowView(model: row.model, storageText: storageText, width: menuWidth),
-                id: identifier,
-                width: menuWidth,
-                heightCacheScope: row.provider.rawValue,
-                heightCacheFingerprint: row.model.heightFingerprint(
-                    section: "overview",
-                    additional: [UsageMenuCardView.Model.heightFingerprintField("storage", storageText)]),
+            let item = self.makePersonalizedOverviewCardItem(PersonalizedOverviewCardContext(
+                provider: row.provider,
+                model: row.model,
+                storageText: storageText,
+                menuWidth: menuWidth,
                 submenu: submenu,
-                containsInteractiveControls: row.model.subtitleStyle == .error || row.model.usesLiveSubtitle,
-                usesGPUSelection: true,
-                onClick: { [weak self, weak interactionMenu] in
-                    guard let self, let interactionMenu else { return }
-                    self.selectOverviewProvider(row.provider, menu: interactionMenu)
-                })
-            if submenu == nil {
-                // Keep plain rows wired for keyboard activation and accessibility action paths.
-                item.target = self
-                item.action = #selector(self.selectOverviewProvider(_:))
-            }
+                interactionMenu: interactionMenu,
+                identifier: identifier,
+                usesCompactOverview: usesCompactOverview))
             menu.addItem(item)
             if index < rows.count - 1 {
                 menu.addItem(.separator())
@@ -605,9 +599,11 @@ extension StatusItemController {
     }
 
     private func addOverviewEmptyState(to menu: NSMenu, enabledProviders: [UsageProvider]) {
-        let resolvedProviders = self.settings.resolvedMergedOverviewProviders(
-            activeProviders: enabledProviders,
-            maxVisibleProviders: Self.maxOverviewProviders)
+        let resolvedProviders = self.usesCompactOverview(enabledProviders: enabledProviders)
+            ? enabledProviders
+            : self.settings.resolvedMergedOverviewProviders(
+                activeProviders: enabledProviders,
+                maxVisibleProviders: Self.maxOverviewProviders)
         let message = resolvedProviders.isEmpty
             ? L("No providers selected for Overview.")
             : L("No overview data available.")
