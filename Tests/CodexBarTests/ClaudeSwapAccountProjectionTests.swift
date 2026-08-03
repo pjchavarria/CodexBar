@@ -73,6 +73,83 @@ struct ClaudeSwapAccountProjectionTests {
     }
 
     @Test
+    func `duplicate active account usage is hidden from inactive account`() throws {
+        let reset = Date(timeIntervalSince1970: 1_782_170_999)
+        let duplicateUsage = ClaudeSwapUsageWindow(usedPercent: 43, resetsAt: reset)
+        let scenarios: [([ClaudeSwapAccountWarning], String)] = [
+            (
+                [ClaudeSwapAccountWarning(kind: .lockstepUsage, accountNumbers: [1, 2])],
+                "Usage exactly matches another claude-swap account and may belong to it, so it is hidden. " +
+                    "Re-add this account in claude-swap."),
+            (
+                [
+                    ClaudeSwapAccountWarning(kind: .lockstepUsage, accountNumbers: [1, 2]),
+                    ClaudeSwapAccountWarning(kind: .duplicateCredential, accountNumbers: [1, 2]),
+                ],
+                "This slot shares another claude-swap account's credential, so its usage is hidden. " +
+                    "Re-add this account in claude-swap."),
+        ]
+
+        for (warnings, expectedError) in scenarios {
+            let list = ClaudeSwapAccountList(
+                activeAccountNumber: 2,
+                accounts: [
+                    ClaudeSwapAccountRow(
+                        number: 1,
+                        email: "work@example.com",
+                        isActive: false,
+                        usageStatus: .ok,
+                        fiveHour: duplicateUsage,
+                        sevenDay: duplicateUsage),
+                    ClaudeSwapAccountRow(
+                        number: 2,
+                        email: "personal@example.com",
+                        isActive: true,
+                        usageStatus: .ok,
+                        fiveHour: duplicateUsage,
+                        sevenDay: duplicateUsage),
+                ],
+                warnings: warnings)
+
+            let accounts = ClaudeSwapAccountProjection.accountSnapshots(from: list, now: self.now)
+            let active = try #require(accounts.first(where: { $0.isActive }))
+            let inactive = try #require(accounts.first(where: { !$0.isActive }))
+
+            #expect(active.snapshot?.primary?.usedPercent == 43)
+            #expect(active.error == nil)
+            #expect(inactive.snapshot == nil)
+            #expect(inactive.canActivate == false)
+            #expect(inactive.error == expectedError)
+        }
+
+        let ambiguousList = ClaudeSwapAccountList(
+            activeAccountNumber: nil,
+            accounts: [
+                ClaudeSwapAccountRow(
+                    number: 1,
+                    email: "work@example.com",
+                    isActive: false,
+                    usageStatus: .ok,
+                    fiveHour: duplicateUsage,
+                    sevenDay: duplicateUsage),
+                ClaudeSwapAccountRow(
+                    number: 2,
+                    email: "personal@example.com",
+                    isActive: false,
+                    usageStatus: .ok,
+                    fiveHour: duplicateUsage,
+                    sevenDay: duplicateUsage),
+            ],
+            warnings: [ClaudeSwapAccountWarning(kind: .lockstepUsage, accountNumbers: [1, 2])])
+
+        let ambiguousAccounts = ClaudeSwapAccountProjection.accountSnapshots(from: ambiguousList, now: self.now)
+        #expect(ambiguousAccounts.count == 2)
+        #expect(ambiguousAccounts.allSatisfy { $0.snapshot == nil })
+        #expect(ambiguousAccounts.allSatisfy { !$0.canActivate })
+        #expect(ambiguousAccounts.allSatisfy { $0.error == scenarios[0].1 })
+    }
+
+    @Test
     func `maps sentinel statuses to per account errors without usage`() throws {
         let rows: [(ClaudeSwapUsageStatus, String)] = [
             (.tokenExpired, "Token expired"),

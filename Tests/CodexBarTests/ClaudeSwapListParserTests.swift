@@ -39,6 +39,13 @@ struct ClaudeSwapListParserTests {
               "usageStatus": "ok",
               "usage": {"fiveHour": {"pct": 80}}
             }
+          ],
+          "duplicateAccountWarnings": [
+            "Account-1 and Account-2 hold the same credential (personal@example.com)",
+            "future warning shape"
+          ],
+          "lockstepUsageWarnings": [
+            "Account-1 and Account-2 report identical usage and reset times"
           ]
         }
         """
@@ -46,6 +53,10 @@ struct ClaudeSwapListParserTests {
         let list = try self.parse(json)
         #expect(list.activeAccountNumber == 2)
         #expect(list.accounts.count == 2)
+        #expect(list.warnings == [
+            ClaudeSwapAccountWarning(kind: .duplicateCredential, accountNumbers: [1, 2]),
+            ClaudeSwapAccountWarning(kind: .lockstepUsage, accountNumbers: [1, 2]),
+        ])
 
         let first = try #require(list.accounts.first)
         #expect(first.number == 1)

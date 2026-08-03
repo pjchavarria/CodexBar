@@ -75,8 +75,12 @@ envelope. CodexBar does not need
 - Require `schemaVersion == 1`; reject unknown versions and partial top-level shapes.
 - Bound runtime and stdout, terminate on timeout, and retain the last successful snapshot with a stale marker.
 - Parse only slot number, active state, usage status, 5-hour/7-day percentages, optional `usage.scoped` display names
-  and percentages, and reset timestamps. Ignore malformed or unknown scoped rows without discarding valid account-wide
-  windows.
+  and percentages, reset timestamps, and the numeric slot pairs from claude-swap's duplicate-credential and
+  identical-usage warnings. Ignore malformed or unknown additive rows without discarding valid account-wide windows.
+- When a warning pairs the active account with an inactive slot, trust only the active account's live usage; hide the
+  inactive slot's metrics and activation action until the user re-adds it in claude-swap. When no warned slot is
+  active, hide every warned slot rather than guessing ownership. Never retain or render the provider's raw warning
+  text because it can contain account email addresses.
 - Treat email as display-only sensitive data. Never log or persist it. Respect Hide Personal Info.
 - Use the source-issued numeric slot for identity (`claude-swap:<slot>`), not email or credential-derived values.
 - CodexBar never reads `claude-swap` storage, Claude Code storage, environment credentials, or Keychain entries. The

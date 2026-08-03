@@ -5,16 +5,38 @@ import Foundation
 ///
 /// Only the fields allow-listed in `docs/claude-multi-account-and-status-items.md`
 /// are decoded: slot number, display email, active state, usage status, and the
-/// 5-hour/7-day windows and optional model-scoped weekly windows (percent +
-/// reset timestamp). Everything else in the payload is ignored; unknown schema
-/// versions and partial top-level shapes are rejected.
+/// 5-hour/7-day windows, optional model-scoped weekly windows (percent + reset
+/// timestamp), and privacy-safe account-slot diagnostics. Everything else in
+/// the payload is ignored; unknown schema versions and partial top-level shapes
+/// are rejected.
 public struct ClaudeSwapAccountList: Equatable, Sendable {
     public let activeAccountNumber: Int?
     public let accounts: [ClaudeSwapAccountRow]
+    public let warnings: [ClaudeSwapAccountWarning]
 
-    public init(activeAccountNumber: Int?, accounts: [ClaudeSwapAccountRow]) {
+    public init(
+        activeAccountNumber: Int?,
+        accounts: [ClaudeSwapAccountRow],
+        warnings: [ClaudeSwapAccountWarning] = [])
+    {
         self.activeAccountNumber = activeAccountNumber
         self.accounts = accounts
+        self.warnings = warnings
+    }
+}
+
+public struct ClaudeSwapAccountWarning: Equatable, Sendable {
+    public enum Kind: Equatable, Sendable {
+        case duplicateCredential
+        case lockstepUsage
+    }
+
+    public let kind: Kind
+    public let accountNumbers: [Int]
+
+    public init(kind: Kind, accountNumbers: [Int]) {
+        self.kind = kind
+        self.accountNumbers = accountNumbers
     }
 }
 
@@ -170,7 +192,39 @@ public enum ClaudeSwapListParser {
         guard activeSlots == (activeAccountNumber.map { [$0] } ?? []) else {
             throw ClaudeSwapListParserError.malformedShape("active account fields disagree")
         }
-        return ClaudeSwapAccountList(activeAccountNumber: activeAccountNumber, accounts: accounts)
+        return ClaudeSwapAccountList(
+            activeAccountNumber: activeAccountNumber,
+            accounts: accounts,
+            warnings: self.parseAccountWarnings(object))
+    }
+
+    /// Newer claude-swap releases report suspected duplicate slots as additive
+    /// human-readable warnings. Retain only the numeric slot pair and warning
+    /// kind so provider-controlled text (including email addresses) never
+    /// crosses the parser boundary or bypasses Hide Personal Info.
+    private static func parseAccountWarnings(_ object: [String: Any]) -> [ClaudeSwapAccountWarning] {
+        let fields = [
+            ("duplicateAccountWarnings", ClaudeSwapAccountWarning.Kind.duplicateCredential),
+            ("lockstepUsageWarnings", ClaudeSwapAccountWarning.Kind.lockstepUsage),
+        ]
+        var parsed: [ClaudeSwapAccountWarning] = []
+        for (key, kind) in fields {
+            guard let rawWarnings = object[key] as? [Any] else { continue }
+            parsed.append(contentsOf: rawWarnings.compactMap { rawWarning in
+                guard let warning = rawWarning as? String,
+                      let match = warning.firstMatch(of: /^Account-(\d+) and Account-(\d+)\b/),
+                      let first = Int(match.1),
+                      let second = Int(match.2),
+                      first > 0,
+                      second > 0,
+                      first != second
+                else {
+                    return nil
+                }
+                return ClaudeSwapAccountWarning(kind: kind, accountNumbers: [first, second])
+            })
+        }
+        return parsed
     }
 
     private static func parseRow(_ row: [String: Any]) throws -> ClaudeSwapAccountRow {

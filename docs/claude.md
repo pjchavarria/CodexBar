@@ -132,7 +132,8 @@ The accepted multi-account design in
 - Behavior: on each Claude refresh, CodexBar runs `cswap --list --json` independently of the ambient Claude fetch (no
   shell, fixed arguments, bounded runtime and output), requires `schemaVersion == 1`, and parses only slot number,
   active state, usage status, email (display only), the 5-hour/7-day windows, and optional display-only model-scoped
-  weekly windows from `usage.scoped`.
+  weekly windows from `usage.scoped`. It also recognizes claude-swap's duplicate-credential and identical-usage
+  warnings by numeric slot only; raw warning text is never retained or rendered.
 - Display: when claude-swap reports more than one account, the Claude menu and `codexbar cards` show one card per
   account (active account first, then numeric slot) instead of ambient/token-account Claude cards. With four or more
   accounts the app menu switches to a compact layout (`AccountMenuLayoutPlanner`): the active account keeps its full
@@ -158,6 +159,9 @@ The accepted multi-account design in
 - Sentinel statuses (`token_expired`, `api_key`, `keychain_unavailable`, `no_credentials`,
   `unavailable`, and unknown future values) render as per-account notes instead of usage bars in both full and brief
   cards. Active rows are marked `[active]`; no claude-swap row infers a plan badge.
+- When claude-swap reports that an inactive slot shares credentials or exact usage/reset data with the active slot,
+  CodexBar keeps the active account's metrics but hides the suspect inactive metrics and switch action. The inactive
+  card tells the user to re-add that account in claude-swap instead of presenting another account's quota as its own.
 - Switching: an inactive account with usable source credentials shows “Switch Account…”. Clicking it runs exactly
   `cswap --switch-to <slot> --json`, validates the versioned result and requested slot, then refreshes both ambient
   Claude usage and every claude-swap account card. Switches are serialized; no automatic switching occurs.

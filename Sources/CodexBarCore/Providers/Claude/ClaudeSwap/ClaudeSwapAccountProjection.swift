@@ -17,6 +17,7 @@ public enum ClaudeSwapAccountProjection {
         from list: ClaudeSwapAccountList,
         now: Date = Date()) -> [ProviderAccountUsageSnapshot]
     {
+        let unreliableAccounts = self.unreliableAccounts(in: list)
         let ordered = list.accounts.sorted { lhs, rhs in
             if lhs.isActive != rhs.isActive {
                 return lhs.isActive
@@ -24,14 +25,15 @@ public enum ClaudeSwapAccountProjection {
             return lhs.number < rhs.number
         }
         return ordered.map { row in
-            ProviderAccountUsageSnapshot(
+            let warning = unreliableAccounts[row.number]
+            return ProviderAccountUsageSnapshot(
                 id: ProviderAccountIdentity(source: self.sourceName, opaqueID: String(row.number)),
                 provider: .claude,
                 displayLabel: self.displayLabel(for: row),
                 isActive: row.isActive,
-                canActivate: !row.isActive && self.canActivate(row),
-                snapshot: self.usageSnapshot(for: row, now: now),
-                error: self.errorText(for: row),
+                canActivate: warning == nil && !row.isActive && self.canActivate(row),
+                snapshot: warning == nil ? self.usageSnapshot(for: row, now: now) : nil,
+                error: warning.map(self.errorText(for:)) ?? self.errorText(for: row),
                 sourceLabel: self.sourceLabel)
         }
     }
@@ -48,6 +50,39 @@ public enum ClaudeSwapAccountProjection {
 
     static func displayLabel(for row: ClaudeSwapAccountRow) -> String {
         row.email.isEmpty ? "Account \(row.number)" : row.email
+    }
+
+    private static func unreliableAccounts(
+        in list: ClaudeSwapAccountList) -> [Int: ClaudeSwapAccountWarning.Kind]
+    {
+        let knownAccounts = Set(list.accounts.map(\.number))
+        var unreliable: [Int: ClaudeSwapAccountWarning.Kind] = [:]
+        for warning in list.warnings {
+            let warnedAccounts = Set(warning.accountNumbers)
+            guard warnedAccounts.count == 2, warnedAccounts.isSubset(of: knownAccounts) else { continue }
+            let accountsToSuppress = if let active = list.activeAccountNumber, warnedAccounts.contains(active) {
+                warnedAccounts.subtracting([active])
+            } else {
+                warnedAccounts
+            }
+            for account in accountsToSuppress {
+                if warning.kind == .duplicateCredential || unreliable[account] == nil {
+                    unreliable[account] = warning.kind
+                }
+            }
+        }
+        return unreliable
+    }
+
+    private static func errorText(for warning: ClaudeSwapAccountWarning.Kind) -> String {
+        switch warning {
+        case .duplicateCredential:
+            "This slot shares another claude-swap account's credential, so its usage is hidden. " +
+                "Re-add this account in claude-swap."
+        case .lockstepUsage:
+            "Usage exactly matches another claude-swap account and may belong to it, so it is hidden. " +
+                "Re-add this account in claude-swap."
+        }
     }
 
     private static func usageSnapshot(for row: ClaudeSwapAccountRow, now: Date) -> UsageSnapshot? {
