@@ -23,3 +23,12 @@
   `Sources/CodexBar/CompactOverviewDashboard.swift`, `Tests/CodexBarTests/UsageMenuCardLayoutTests.swift`, and
   `docs/compact-overview.md`.
 - **Revisit when:** Upstream exposes a typed provider-wide multi-account history model or changes merged-menu routing.
+
+## KB-003 · Verify identity and suppress mutator output for claude-swap recovery
+- **Status:** active
+- **Last verified:** 2026-08-03
+- **Use when:** Diagnosing or repairing claude-swap account slots.
+- **Knowledge:** Before `add --slot`, compare Claude's native auth status with the intended identity; reauthentication can leave the same account active, and claude-swap then moves that existing account into the target slot. Never surface raw output from account mutations because it can print private identity labels. Suppress it and verify the result separately with allowlisted slot numbers, status enums, counts, and identity-equality booleans.
+- **Why:** A visually assumed login can overwrite or move the wrong slot, while shallow or post-action-only redaction can expose private account data.
+- **Evidence:** Installed claude-swap 0.24.1 `add_account` slot-migration behavior, `claude auth status --json`, and redacted `cswap list/status --json` recovery probes verified on 2026-08-03.
+- **Revisit when:** claude-swap adds a machine-verifiable intended-identity guard and privacy-safe structured mutation results.
