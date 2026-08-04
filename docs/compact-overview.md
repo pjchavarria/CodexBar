@@ -1,11 +1,12 @@
-# Compact Multi-Account Overview
+_Status: shipped · 2026-08-04_
 
-> Status: active — updated 2026-08-03
+# Compact Multi-Account Overview
 
 ## Resume here
 
-Keep the approved Route B compact overview working at 310 points, validate it with synthetic rendering and packaged-app
-runtime geometry, then merge future upstream releases into the fork without spreading personalization into provider code.
+Keep the approved Route B compact overview working at 360 points in the separately installed CodexBar Personal app,
+validate it with synthetic rendering and packaged-app runtime geometry, then merge future upstream releases into the
+fork without spreading personalization into provider code.
 
 ## Current reality
 
@@ -15,19 +16,29 @@ runtime geometry, then merge future upstream releases into the fork without spre
   settings, and provider submenus.
 - The fork adds a presentation seam, a compact provider card, and account-to-card projection. It does not add another
   credential store, fetcher, parser, or chart data source.
+- `Scripts/install_personal_app.sh` packages and installs `/Applications/CodexBar Personal.app` with a separate bundle
+  identity, imports upstream settings once, uses the existing shared account stores, and leaves upstream CodexBar intact.
+  The personal package disables Sparkle updates, the widget, and iCloud app-group sync until matching personal
+  provisioning is deliberately configured.
 
 ## Direction
 
-- Keep the merged menu fixed at `StatusItemController.menuCardBaseWidth` (310 points).
+- Keep the merged menu fixed at `CodexBarPersonalization.compactOverviewMenuWidth` (360 points) so ordinary account
+  identities remain readable in both columns.
 - Always open the merged multi-provider menu on Overview and omit the provider switcher.
 - Lay every available Codex or Claude account into two equal columns within its provider section.
+- Do not cap the account grid or drop an account when usage is missing, stale, or failed; render its identity and
+  truthful status while retaining the same two-column flow.
+- Clear launcher-scoped `CODEX_HOME` and `CLAUDE_CONFIG_DIR` before app initialization so T3, shell, Finder, and Login
+  Item launches all discover the same account census; targeted account fetches still supply their explicit homes.
 - Show Codex Weekly only. Show Claude Session, Weekly, and Fable only as equally compact peer bars in Claude's provider
   color, preserving the existing red pacing and threshold markers.
 - Do not render usage dashboards inside account or provider sections. Render one combined cost/token KPI and chart
   model at the bottom of the entire overview, without dashboard detail lines. Keep the four KPIs global while stacking
   each chart day by provider color with a text legend. Aggregate retained typed usage values and provider identity
   before currency, token totals, chart points, and accessibility text are formatted.
-- Keep provider actions in the existing submenus and keep bottom Refresh, Settings, About, and Quit actions.
+- Route B is the only runtime menu: do not attach provider tabs, submenus, alternate layouts, agent-session rows, or a
+  Settings action. Keep bottom Refresh, About, and Quit actions.
 - Leave the status-item visualization unchanged until a later design decision.
 
 ## Upstream compatibility boundary
@@ -41,9 +52,9 @@ layout proof plus the repository test/check commands, then inspect the synthetic
 
 ## Next checkpoint
 
-Run the freshly built fork after local tests and synthetic rendering are clean; confirm that every known Codex and
-Claude account identity appears in its two-column provider grid and that the bottom chart separates every available
-typed cost source without duplicating provider sections.
+Keep the installed personal app current by merging `upstream/main`, rerunning the personal installer, and confirming
+that every known Codex and Claude account identity appears in its two-column provider grid and that the bottom chart
+separates every available typed cost source without duplicating provider sections.
 
 ## Direction log
 
@@ -54,3 +65,9 @@ typed cost source without duplicating provider sections.
   Weekly as a yellow sub-bar.
 - 2026-08-03: User approved Route B, superseding vertical accounts and nested-yellow Claude bars with two account
   columns, three compact Claude peer bars, and a provider-colored stacked aggregate chart.
+- 2026-08-04: User chose to start using Route B as a separately installed personal app and authorized validation with
+  every configured Codex and Claude account.
+- 2026-08-04: User removed every non-Route-B surface and required the overview to retain every configured account,
+  including accounts whose usage cannot be fetched.
+- 2026-08-04: The live two-column menu proved 310 points too narrow for ordinary email-length identities; the user
+  locked Route B to a wider 360-point menu.

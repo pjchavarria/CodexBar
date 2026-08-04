@@ -52,12 +52,19 @@ extension StatusItemController {
             return nil
         }
         let accounts = self.settings.tokenAccounts(for: provider)
-        guard accounts.count > 1 else { return nil }
+        let showsEveryAccount = self.store.compactOverviewShowsEveryAccount(for: provider)
+        guard accounts.count > 1 || showsEveryAccount && !accounts.isEmpty else { return nil }
         let activeIndex = self.settings.tokenAccountsData(for: provider)?.clampedActiveIndex() ?? 0
         let showAll = self.store.compactOverviewNeedsAllAccounts(for: provider)
-        let displayAccounts = showAll
-            ? self.store.limitedTokenAccounts(accounts, selected: self.settings.selectedTokenAccount(for: provider))
-            : accounts
+        let displayAccounts: [ProviderTokenAccount] = if showAll,
+                                                         !self.store.compactOverviewShowsEveryAccount(for: provider)
+        {
+            self.store.limitedTokenAccounts(
+                accounts,
+                selected: self.settings.selectedTokenAccount(for: provider))
+        } else {
+            accounts
+        }
         let snapshots = showAll
             ? self.tokenAccountSnapshots(for: provider, matching: displayAccounts)
             : []
@@ -99,14 +106,24 @@ extension StatusItemController {
     func codexAccountMenuDisplay(for provider: UsageProvider) -> CodexAccountMenuDisplay? {
         guard provider == .codex else { return nil }
         guard let projection = self.settings.codexVisibleAccountProjectionForMenuDisplay else { return nil }
-        guard projection.visibleAccounts.count > 1 else { return nil }
+        let showsEveryAccount = self.store.compactOverviewShowsEveryAccount(for: .codex)
+        guard projection.visibleAccounts.count > 1 || showsEveryAccount && !projection.visibleAccounts.isEmpty else {
+            return nil
+        }
         let showAll = self.store.compactOverviewNeedsAllAccounts(for: .codex)
-        let accounts = showAll
-            ? self.store.limitedCodexVisibleAccounts(
+        let accounts: [CodexVisibleAccount] = if showAll, self.store.compactOverviewShowsEveryAccount(for: .codex) {
+            CodexAccountPresentationOrdering.orderedAccounts(
                 projection.visibleAccounts,
                 snapshots: self.store.codexAccountSnapshots,
                 activeVisibleAccountID: projection.activeVisibleAccountID)
-            : projection.visibleAccounts
+        } else if showAll {
+            self.store.limitedCodexVisibleAccounts(
+                projection.visibleAccounts,
+                snapshots: self.store.codexAccountSnapshots,
+                activeVisibleAccountID: projection.activeVisibleAccountID)
+        } else {
+            projection.visibleAccounts
+        }
         let snapshots = showAll ? self.codexAccountSnapshots(matching: accounts) : []
         return CodexAccountMenuDisplay(
             accounts: accounts,

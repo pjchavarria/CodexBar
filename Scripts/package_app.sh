@@ -38,6 +38,20 @@ SIGNING_MODE=
 resolve_package_signing_mode
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
+BUILD_ROOT="${CODEXBAR_BUILD_ROOT:-$ROOT/.build}"
+BUILD_ROOT_BASENAME="$(basename "$BUILD_ROOT")"
+if [[ "$BUILD_ROOT" != /* || "$BUILD_ROOT" == "/" || "$BUILD_ROOT" == "$HOME" ]]; then
+  echo "ERROR: CODEXBAR_BUILD_ROOT must be an absolute, task-specific CodexBar build directory" >&2
+  exit 1
+fi
+case "$BUILD_ROOT_BASENAME" in
+  .build|*CodexBar*|*codexbar*) ;;
+  *)
+    echo "ERROR: CODEXBAR_BUILD_ROOT must be an absolute, task-specific CodexBar build directory" >&2
+    exit 1
+    ;;
+esac
+SWIFT_BUILD_SCRATCH_ARGS=(--scratch-path "$BUILD_ROOT")
 LOWER_CONF=$(printf "%s" "$CONF" | tr '[:upper:]' '[:lower:]')
 case "$LOWER_CONF" in
   debug|release) ;;
@@ -54,16 +68,16 @@ source "$ROOT/Scripts/sparkle_signing_paths.sh"
 
 # Clean build only when explicitly requested (slower).
 if [[ "${CODEXBAR_FORCE_CLEAN:-0}" == "1" ]]; then
-  if [[ -d "$ROOT/.build" ]]; then
+  if [[ -d "$BUILD_ROOT" ]]; then
     if command -v trash >/dev/null 2>&1; then
-      if ! trash "$ROOT/.build"; then
-        echo "WARN: trash .build failed; continuing with swift package clean." >&2
+      if ! trash "$BUILD_ROOT"; then
+        echo "WARN: trash build root failed; continuing with swift package clean." >&2
       fi
     else
-      rm -rf "$ROOT/.build" || echo "WARN: rm -rf .build failed; continuing with swift package clean." >&2
+      rm -rf "$BUILD_ROOT" || echo "WARN: build-root removal failed; continuing with swift package clean." >&2
     fi
   fi
-  swift package clean >/dev/null 2>&1 || true
+  swift package --scratch-path "$BUILD_ROOT" clean >/dev/null 2>&1 || true
 fi
 
 # Build for host architecture by default; allow overriding via ARCHES (e.g., "arm64 x86_64" for universal).
@@ -78,7 +92,7 @@ if [[ ${#ARCH_LIST[@]} -eq 0 ]]; then
 fi
 
 patch_keyboard_shortcuts() {
-  local util_path="$ROOT/.build/checkouts/KeyboardShortcuts/Sources/KeyboardShortcuts/Utilities.swift"
+  local util_path="$BUILD_ROOT/checkouts/KeyboardShortcuts/Sources/KeyboardShortcuts/Utilities.swift"
   if [[ ! -f "$util_path" ]]; then
     return 0
   fi
@@ -141,9 +155,9 @@ path.write_text(text)
 PY
 }
 
-KEYBOARD_SHORTCUTS_UTIL="$ROOT/.build/checkouts/KeyboardShortcuts/Sources/KeyboardShortcuts/Utilities.swift"
+KEYBOARD_SHORTCUTS_UTIL="$BUILD_ROOT/checkouts/KeyboardShortcuts/Sources/KeyboardShortcuts/Utilities.swift"
 if [[ ! -f "$KEYBOARD_SHORTCUTS_UTIL" ]]; then
-  swift build -c "$CONF" --arch "${ARCH_LIST[0]}"
+  swift build "${SWIFT_BUILD_SCRATCH_ARGS[@]}" -c "$CONF" --arch "${ARCH_LIST[0]}"
 fi
 patch_keyboard_shortcuts
 
@@ -172,7 +186,7 @@ binary_has_arch() {
 
 # SwiftBuild can reuse one output directory for sequential per-arch builds. Snapshot
 # each fresh slice before the next build can replace it.
-PRODUCT_STAGE_ROOT="$ROOT/.build/package-products/$LOWER_CONF"
+PRODUCT_STAGE_ROOT="$BUILD_ROOT/package-products/$LOWER_CONF"
 rm -rf "$PRODUCT_STAGE_ROOT"
 
 stage_build_products() {
@@ -198,12 +212,17 @@ stage_build_products() {
 }
 
 for ARCH in "${ARCH_LIST[@]}"; do
-  swift build -c "$CONF" --arch "$ARCH"
+  swift build "${SWIFT_BUILD_SCRATCH_ARGS[@]}" -c "$CONF" --arch "$ARCH"
   stage_build_products "$ARCH"
 done
 
-APP_FINAL="$ROOT/CodexBar.app"
-APP_STAGE="$ROOT/.build/package/CodexBar.app"
+APP_BUNDLE_NAME="${CODEXBAR_APP_BUNDLE_NAME:-CodexBar.app}"
+if [[ "$APP_BUNDLE_NAME" == */* || "$APP_BUNDLE_NAME" != *.app ]]; then
+  echo "ERROR: CODEXBAR_APP_BUNDLE_NAME must be a single .app bundle name" >&2
+  exit 1
+fi
+APP_FINAL="$ROOT/$APP_BUNDLE_NAME"
+APP_STAGE="$BUILD_ROOT/package/CodexBar.app"
 rm -rf "$APP_STAGE"
 APP="$APP_STAGE"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
@@ -216,25 +235,52 @@ if [[ -f "$ICON_SOURCE" ]]; then
   iconutil --convert icns --output "$ICON_TARGET" "$ICON_SOURCE"
 fi
 
-BUNDLE_ID="com.steipete.codexbar"
+BUNDLE_ID="${CODEXBAR_BUNDLE_ID:-com.steipete.codexbar}"
+DISPLAY_NAME="${CODEXBAR_DISPLAY_NAME:-CodexBar}"
 FEED_URL="https://raw.githubusercontent.com/steipete/CodexBar/main/appcast.xml"
 AUTO_CHECKS=true
-if [[ "$LOWER_CONF" == "debug" ]]; then
+if [[ "$LOWER_CONF" == "debug" && -z "${CODEXBAR_BUNDLE_ID:-}" ]]; then
   BUNDLE_ID="com.steipete.codexbar.debug"
   FEED_URL=""
   AUTO_CHECKS=false
+fi
+if [[ -n "${CODEXBAR_FEED_URL+x}" ]]; then
+  FEED_URL="$CODEXBAR_FEED_URL"
+fi
+if [[ -n "${CODEXBAR_AUTO_CHECKS:-}" ]]; then
+  AUTO_CHECKS="$CODEXBAR_AUTO_CHECKS"
 fi
 if [[ "$SIGNING_MODE" == "adhoc" ]]; then
   FEED_URL=""
   AUTO_CHECKS=false
 fi
+case "$AUTO_CHECKS" in
+  true|false) ;;
+  *)
+    echo "ERROR: CODEXBAR_AUTO_CHECKS must be true or false" >&2
+    exit 1
+    ;;
+esac
+INCLUDE_WIDGET="${CODEXBAR_INCLUDE_WIDGET:-1}"
+INCLUDE_APP_GROUP="${CODEXBAR_INCLUDE_APP_GROUP:-1}"
+case "$INCLUDE_WIDGET:$INCLUDE_APP_GROUP" in
+  0:0|0:1|1:1) ;;
+  1:0)
+    echo "ERROR: The widget requires CODEXBAR_INCLUDE_APP_GROUP=1" >&2
+    exit 1
+    ;;
+  *)
+    echo "ERROR: CODEXBAR_INCLUDE_WIDGET and CODEXBAR_INCLUDE_APP_GROUP must be 0 or 1" >&2
+    exit 1
+    ;;
+esac
 WIDGET_BUNDLE_ID="${BUNDLE_ID}.widget"
 APP_TEAM_ID="${APP_TEAM_ID:-Y5PE65HELJ}"
-APP_GROUP_ID="${APP_TEAM_ID}.com.steipete.codexbar"
+APP_GROUP_ID="${CODEXBAR_APP_GROUP_ID:-${APP_TEAM_ID}.com.steipete.codexbar}"
 if [[ "$BUNDLE_ID" == *".debug"* ]]; then
   APP_GROUP_ID="${APP_TEAM_ID}.com.steipete.codexbar.debug"
 fi
-ENTITLEMENTS_DIR="$ROOT/.build/entitlements"
+ENTITLEMENTS_DIR="$BUILD_ROOT/entitlements"
 APP_ENTITLEMENTS="${ENTITLEMENTS_DIR}/CodexBar.entitlements"
 WIDGET_ENTITLEMENTS="${ENTITLEMENTS_DIR}/CodexBarWidget.entitlements"
 mkdir -p "$ENTITLEMENTS_DIR"
@@ -248,7 +294,7 @@ fi
 PROVISIONING_PROFILE_SOURCE="$ROOT/Scripts/profiles/CodexBar-DeveloperID.provisionprofile"
 EMBED_PROVISIONING_PROFILE=0
 ICLOUD_ENTITLEMENT_KEYS=""
-if [[ "$SIGNING_MODE" == "identity" && "$LOWER_CONF" == "release" && "$BUNDLE_ID" == "com.steipete.codexbar" ]]; then
+if [[ "$INCLUDE_APP_GROUP" == "1" && "$SIGNING_MODE" == "identity" && "$LOWER_CONF" == "release" && "$BUNDLE_ID" == "com.steipete.codexbar" ]]; then
   if [[ ! -f "$PROVISIONING_PROFILE_SOURCE" ]]; then
     echo "ERROR: Missing $PROVISIONING_PROFILE_SOURCE (required for iCloud entitlements in release builds)" >&2
     exit 1
@@ -272,15 +318,22 @@ if [[ "$SIGNING_MODE" == "identity" && "$LOWER_CONF" == "release" && "$BUNDLE_ID
 ICLOUD
 )
 fi
+APP_GROUP_ENTITLEMENT_KEYS=""
+if [[ "$INCLUDE_APP_GROUP" == "1" ]]; then
+  APP_GROUP_ENTITLEMENT_KEYS=$(cat <<APPGROUP
+    <key>com.apple.security.application-groups</key>
+    <array>
+        <string>${APP_GROUP_ID}</string>
+    </array>
+APPGROUP
+)
+fi
 cat > "$APP_ENTITLEMENTS" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>com.apple.security.application-groups</key>
-    <array>
-        <string>${APP_GROUP_ID}</string>
-    </array>
+${APP_GROUP_ENTITLEMENT_KEYS}
 ${ICLOUD_ENTITLEMENT_KEYS}
     $(if [[ "$ALLOW_LLDB" == "1" ]]; then echo "    <key>com.apple.security.get-task-allow</key><true/>"; fi)
 </dict>
@@ -308,8 +361,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleName</key><string>CodexBar</string>
-    <key>CFBundleDisplayName</key><string>CodexBar</string>
+    <key>CFBundleName</key><string>${DISPLAY_NAME}</string>
+    <key>CFBundleDisplayName</key><string>${DISPLAY_NAME}</string>
     <key>CFBundleIdentifier</key><string>${BUNDLE_ID}</string>
     <key>CFBundleExecutable</key><string>CodexBar</string>
     <key>CFBundlePackageType</key><string>APPL</string>
@@ -328,7 +381,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>UTExportedTypeDeclarations</key>
     <array>
         <dict>
-            <key>UTTypeIdentifier</key><string>com.steipete.codexbar.menu-layout-item</string>
+            <key>UTTypeIdentifier</key><string>${BUNDLE_ID}.menu-layout-item</string>
             <key>UTTypeDescription</key><string>CodexBar menu bar layout token</string>
             <key>UTTypeConformsTo</key>
             <array>
@@ -434,7 +487,7 @@ build_widget_extension() {
 
   ensure_widget_extension_project
 
-  local derived_dir="$ROOT/.build/xcode-widget-extension-${LOWER_CONF}"
+  local derived_dir="$BUILD_ROOT/xcode-widget-extension-${LOWER_CONF}"
   local project_dir="$ROOT/WidgetExtension/CodexBarWidgetExtension.xcodeproj"
   local build_log="$derived_dir/xcodebuild.log"
   local timeout_seconds="${CODEXBAR_WIDGET_EXTENSION_TIMEOUT_SECONDS:-900}"
@@ -509,8 +562,10 @@ strip_release_binary "$APP/Contents/Helpers/CodexBarCLI"
 # Watchdog helper: ensures `claude` probes die when CodexBar crashes/gets killed.
 install_binary "CodexBarClaudeWatchdog" "$APP/Contents/Helpers/CodexBarClaudeWatchdog"
 strip_release_binary "$APP/Contents/Helpers/CodexBarClaudeWatchdog"
-install_widget_extension
-strip_release_binary "$APP/Contents/PlugIns/CodexBarWidget.appex/Contents/MacOS/CodexBarWidget"
+if [[ "$INCLUDE_WIDGET" == "1" ]]; then
+  install_widget_extension
+  strip_release_binary "$APP/Contents/PlugIns/CodexBarWidget.appex/Contents/MacOS/CodexBarWidget"
+fi
 
 swiftpm_bin_path "${ARCH_LIST[0]}" PREFERRED_BUILD_DIR
 

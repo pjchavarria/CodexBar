@@ -91,7 +91,7 @@ struct UsageMenuCardLayoutTests {
     }
 
     @Test
-    func `compact overview keeps the requested quota rows and fixed menu width`() throws {
+    func `compact overview keeps the requested quota rows and readable two column width`() throws {
         let dashboard = InlineUsageDashboardModel(
             accessibilityLabel: "30 day usage",
             valueStyle: .currencyUSD,
@@ -162,31 +162,37 @@ struct UsageMenuCardLayoutTests {
             dashboard: dashboard)
         let codexModel = CompactOverviewProviderCardModel(
             providerModel: codexAccount,
-            accountModels: [
-                (id: "codex-personal", model: codexAccount),
-                (id: "codex-work", model: Self.model(
+            accountModels: (1...8).map { index in
+                (id: "codex-\(index)", model: Self.model(
                     provider: .codex,
-                    email: "Work",
-                    planText: "Team 10x",
-                    metrics: codexMetrics,
-                    dashboard: dashboard)),
-            ])
+                    email: "reviewer0\(index)@example.com",
+                    planText: "Pro 20x",
+                    metrics: index == 8 ? [] : codexMetrics,
+                    placeholder: index == 8 ? "Usage unavailable" : nil,
+                    dashboard: dashboard))
+            })
         let claudeModel = CompactOverviewProviderCardModel(
             providerModel: claudeAccount,
-            accountModels: [
-                (id: "claude-personal", model: claudeAccount),
-                (id: "claude-work", model: Self.model(
+            accountModels: (1...8).map { index in
+                (id: "claude-\(index)", model: Self.model(
                     provider: .claude,
-                    email: "Work",
-                    planText: "Team 5x",
-                    metrics: claudeMetrics,
-                    dashboard: dashboard)),
-            ])
+                    email: "reviewer0\(index)@example.com",
+                    planText: "Max 20x",
+                    metrics: index == 8 ? [] : claudeMetrics,
+                    placeholder: index == 8 ? "Usage unavailable" : nil,
+                    dashboard: dashboard))
+            })
 
-        #expect(codexModel.accounts.allSatisfy { $0.metrics.map(\.id) == ["secondary"] })
-        #expect(claudeModel.accounts.allSatisfy {
+        #expect(codexModel.accounts.count == 8)
+        #expect(claudeModel.accounts.count == 8)
+        #expect(codexModel.accounts.last?.statusText == "Usage unavailable")
+        #expect(claudeModel.accounts.last?.statusText == "Usage unavailable")
+        #expect(codexModel.accounts.dropLast().allSatisfy { $0.metrics.map(\.id) == ["secondary"] })
+        #expect(codexModel.accounts.last?.metrics.isEmpty == true)
+        #expect(claudeModel.accounts.dropLast().allSatisfy {
             $0.metrics.map(\.id) == ["primary", "secondary", "claude-weekly-scoped-fable"]
         })
+        #expect(claudeModel.accounts.last?.metrics.isEmpty == true)
         #expect(CompactOverviewProviderCardView.accountColumnCount == 2)
         let aggregateDashboard = try #require(CompactOverviewDashboard.aggregate([
             .init(provider: .codex, providerName: "Codex", dashboard: dashboard),
@@ -204,7 +210,8 @@ struct UsageMenuCardLayoutTests {
         #expect(aggregateDashboard.days[0].segments.map(\.value) == [4, 1])
         #expect(aggregateDashboard.days[1].segments.map(\.value) == [12, 3])
 
-        let width = StatusItemController.menuCardBaseWidth
+        let width = CodexBarPersonalization.compactOverviewMenuWidth
+        #expect(width == 360)
         let preview = VStack(spacing: 0) {
             CompactOverviewProviderCardView(model: codexModel, width: width)
             Divider()
@@ -223,16 +230,16 @@ struct UsageMenuCardLayoutTests {
     }
 
     @Test
-    func `compact overview routing is limited to merged multi-provider menus`() {
+    func `route B is the only personalized runtime surface and shows every account`() {
         #expect(CodexBarPersonalization.usesCompactOverview(
             featureEnabled: true,
             mergeIcons: true,
             enabledProviderCount: 2))
-        #expect(!CodexBarPersonalization.usesCompactOverview(
+        #expect(CodexBarPersonalization.usesCompactOverview(
             featureEnabled: true,
             mergeIcons: true,
             enabledProviderCount: 1))
-        #expect(!CodexBarPersonalization.usesCompactOverview(
+        #expect(CodexBarPersonalization.usesCompactOverview(
             featureEnabled: true,
             mergeIcons: false,
             enabledProviderCount: 2))
@@ -246,7 +253,7 @@ struct UsageMenuCardLayoutTests {
             enabledProviderCount: 1,
             providerSupportsCompactAccounts: false,
             usesStackedLayout: true))
-        #expect(!CodexBarPersonalization.needsAllAccounts(
+        #expect(CodexBarPersonalization.needsAllAccounts(
             featureEnabled: true,
             mergeIcons: true,
             enabledProviderCount: 1,
@@ -255,6 +262,15 @@ struct UsageMenuCardLayoutTests {
         #expect(CodexBarPersonalization.supportsCompactAccounts(for: .codex))
         #expect(CodexBarPersonalization.supportsCompactAccounts(for: .claude))
         #expect(!CodexBarPersonalization.supportsCompactAccounts(for: .openai))
+        #expect(CodexBarPersonalization.showsEveryAccount(
+            featureEnabled: true,
+            providerSupportsCompactAccounts: true))
+        #expect(!CodexBarPersonalization.showsEveryAccount(
+            featureEnabled: false,
+            providerSupportsCompactAccounts: true))
+        #expect(!CodexBarPersonalization.showsEveryAccount(
+            featureEnabled: true,
+            providerSupportsCompactAccounts: false))
         #expect(!CodexBarPersonalization.needsAllAccounts(
             featureEnabled: true,
             mergeIcons: true,

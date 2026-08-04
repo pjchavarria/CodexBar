@@ -227,10 +227,7 @@ extension UsageStore {
 
     func refreshCodexVisibleAccountsForMenu(generation: UInt64? = nil) async {
         let projection = self.freshCodexVisibleAccountProjectionForAccountRefresh()
-        let accounts = self.limitedCodexVisibleAccounts(
-            projection.visibleAccounts,
-            snapshots: self.codexAccountSnapshots,
-            activeVisibleAccountID: projection.activeVisibleAccountID)
+        let accounts = self.compactOverviewCodexAccounts(from: projection)
         guard accounts.count > 1 else {
             self.codexAccountSnapshots = []
             return
@@ -578,7 +575,10 @@ extension UsageStore {
             }
             return
         }
-        let limitedAccounts = self.limitedTokenAccounts(accounts, selected: selectedAccount)
+        let limitedAccounts = self.compactOverviewTokenAccounts(
+            accounts,
+            selected: selectedAccount,
+            provider: provider)
         let effectiveSelected = selectedAccount
 
         // Capture the prior per-account snapshot state so we can preserve last-good

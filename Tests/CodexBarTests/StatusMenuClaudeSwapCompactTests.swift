@@ -206,5 +206,24 @@ final class StatusMenuClaudeSwapCompactTests: XCTestCase {
         let menu = controller.makeMenu()
         controller.menuWillOpen(menu)
         XCTAssertTrue(self.representedIDs(in: menu).contains("overviewRow-claude"))
+
+        let (singleController, singleStore) = self.makeController(accounts: Array(accounts.prefix(1)))
+        defer { singleController.releaseStatusItemsForTesting() }
+        singleController.settings.mergeIcons = true
+        singleController.settings.setProviderEnabled(provider: .codex, metadata: codexMetadata, enabled: true)
+        singleStore.errors[.claude] = "The configured Claude account is unavailable"
+
+        let singleProviderModel = try XCTUnwrap(singleController.menuCardModel(for: .claude))
+        let singleCompactModel = singleController.compactOverviewProviderCardModel(
+            provider: .claude,
+            providerModel: singleProviderModel)
+
+        XCTAssertEqual(singleCompactModel.accounts.map(\.identityText), [accounts[0].displayLabel])
+        XCTAssertEqual(singleCompactModel.accounts.map(\.statusText), ["Usage unavailable"])
+        XCTAssertTrue(singleCompactModel.accounts[0].metrics.isEmpty)
+
+        let singleMenu = singleController.makeMenu()
+        singleController.menuWillOpen(singleMenu)
+        XCTAssertTrue(self.representedIDs(in: singleMenu).contains("overviewRow-claude"))
     }
 }

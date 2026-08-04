@@ -16,6 +16,8 @@ struct KeychainPromptSafetyAuditTests {
 
         #expect(script.contains("CODEXBAR_ALLOW_TEST_KEYCHAIN_ACCESS"))
         #expect(script.contains("export CODEXBAR_SUPPRESS_TEST_KEYCHAIN_ACCESS=1"))
+        #expect(script.contains("prepare_binary_test_frameworks"))
+        #expect(script.contains("PackageFrameworks"))
     }
 
     @Test

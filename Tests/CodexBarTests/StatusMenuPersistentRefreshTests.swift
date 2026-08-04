@@ -218,6 +218,44 @@ struct StatusMenuPersistentRefreshTests {
     }
 
     @Test
+    func `personal overview ignores legacy selection for refresh and retry scope`() async throws {
+        CodexBarPersonalization.compactOverviewEnabledOverrideForTesting = true
+        defer { CodexBarPersonalization.compactOverviewEnabledOverrideForTesting = nil }
+
+        let settings = self.makeSettings()
+        settings.refreshFrequency = .manual
+        settings.mergeIcons = true
+        settings.mergedMenuLastSelectedWasOverview = false
+        self.enableOnly([.codex, .claude, .cursor], settings: settings)
+        settings.setMergedOverviewProviderSelection(
+            provider: .cursor,
+            isSelected: false,
+            activeProviders: [.codex, .claude, .cursor])
+
+        let controller = self.makeController(settings: settings)
+        defer { controller.releaseStatusItemsForTesting() }
+        let menu = controller.makeMenu()
+        controller.mergedMenu = menu
+        controller.menuWillOpen(menu)
+        defer { controller.menuDidClose(menu) }
+
+        #expect(controller.isMergedOverviewSelected(in: menu))
+        #expect(Set(controller.renderedProviders(for: menu)) == [.codex, .claude, .cursor])
+
+        let gate = ManualRefreshGate()
+        controller._test_manualRefreshOperation = { await gate.wait() }
+        controller.performPersistentRefreshAction(in: ObjectIdentifier(menu))
+        for _ in 0..<20 where controller.manualRefreshTasks[.global] == nil {
+            await Task.yield()
+        }
+
+        let task = try #require(controller.manualRefreshTasks[.global])
+        #expect(controller.manualRefreshTasks[.provider(.codex)] == nil)
+        gate.resume()
+        await task.value
+    }
+
+    @Test
     func `only refresh uses a custom row while standard actions stay native`() throws {
         let previousRendering = StatusItemController.menuCardRenderingEnabled
         StatusItemController.menuCardRenderingEnabled = true

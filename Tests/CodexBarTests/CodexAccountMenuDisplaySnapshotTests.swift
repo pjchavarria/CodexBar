@@ -52,6 +52,50 @@ struct CodexAccountMenuDisplaySnapshotTests {
     }
 
     @Test
+    func `personal overview preserves single unavailable codex account`() throws {
+        CodexBarPersonalization.compactOverviewEnabledOverrideForTesting = true
+        defer { CodexBarPersonalization.compactOverviewEnabledOverrideForTesting = nil }
+
+        let settings = self.makeSettings()
+        self.enableOnlyCodex(settings)
+        let reconciliation = self.liveSnapshot(email: "unavailable@example.com")
+        let store = UsageStore(
+            fetcher: UsageFetcher(),
+            browserDetection: BrowserDetection(cacheTTL: 0),
+            settings: settings,
+            startupBehavior: .testing)
+        let controller = StatusItemController(
+            store: store,
+            settings: settings,
+            account: AccountInfo(email: nil, plan: nil),
+            updater: DisabledUpdaterController(),
+            preferencesSelection: PreferencesSelection(),
+            statusBar: .system)
+        defer { controller.releaseStatusItemsForTesting() }
+
+        let providerModel = try #require(controller.menuCardModel(for: .codex))
+        settings.cachedCodexAccountMenuProjection = self.cachedProjection(snapshot: reconciliation, loadedAt: Date())
+        let account = try #require(settings.codexVisibleAccountProjectionForMenuDisplay?.visibleAccounts.first)
+        store.codexAccountSnapshots = [CodexAccountUsageSnapshot(
+            account: account,
+            snapshot: nil,
+            error: "Usage unavailable",
+            sourceLabel: "fixture")]
+        store.errors[.codex] = "Usage unavailable"
+
+        #expect(try #require(controller.codexAccountMenuDisplay(for: .codex)).accounts.map(\.email) == [
+            "unavailable@example.com",
+        ])
+        let compactModel = controller.compactOverviewProviderCardModel(
+            provider: .codex,
+            providerModel: providerModel)
+
+        #expect(compactModel.accounts.map(\.identityText) == ["unavailable@example.com"])
+        #expect(compactModel.accounts.map(\.statusText) == ["Unavailable"])
+        #expect(try #require(compactModel.accounts.first).metrics.isEmpty)
+    }
+
+    @Test
     func `cold menu projection read never loads auth state`() async {
         let settings = self.makeSettings()
         let probe = CodexAccountSnapshotLoaderProbe(snapshot: self.liveSnapshot(email: "loaded@example.com"))

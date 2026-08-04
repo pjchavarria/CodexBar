@@ -70,6 +70,15 @@ swift() {
 reported=$(codexbar_swiftpm_bin_path release arm64)
 [[ "$reported" == "$SWIFTBUILD_DIR" ]]
 
+CODEXBAR_BUILD_ROOT="$TEMP_DIR/CodexBarBuild"
+swift() {
+  [[ "$*" == "build --show-bin-path -c release --scratch-path $CODEXBAR_BUILD_ROOT --arch arm64" ]]
+  printf '%s\n' "$SWIFTBUILD_DIR"
+}
+reported=$(codexbar_swiftpm_bin_path release arm64)
+[[ "$reported" == "$SWIFTBUILD_DIR" ]]
+unset CODEXBAR_BUILD_ROOT
+
 swift() {
   return 23
 }

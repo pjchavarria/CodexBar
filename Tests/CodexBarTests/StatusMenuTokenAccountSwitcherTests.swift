@@ -109,6 +109,40 @@ final class StatusMenuTokenAccountSwitcherTests: XCTestCase {
                 loginMethod: "OAuth"))
     }
 
+    func test_personalOverviewPreservesSingleUnavailableClaudeTokenAccount() throws {
+        CodexBarPersonalization.compactOverviewEnabledOverrideForTesting = true
+        defer { CodexBarPersonalization.compactOverviewEnabledOverrideForTesting = nil }
+
+        let settings = self.makeSettings()
+        settings.statusChecksEnabled = false
+        settings.refreshFrequency = .manual
+        self.enableOnlyClaude(settings)
+        settings.addTokenAccount(provider: .claude, label: "Unavailable Claude", token: "fixture-token")
+        XCTAssertEqual(settings.tokenAccounts(for: .claude).count, 1)
+
+        let fetcher = UsageFetcher()
+        let store = UsageStore(fetcher: fetcher, browserDetection: BrowserDetection(cacheTTL: 0), settings: settings)
+        store.errors[.claude] = "Usage unavailable"
+        let controller = StatusItemController(
+            store: store,
+            settings: settings,
+            account: fetcher.loadAccountInfo(),
+            updater: DisabledUpdaterController(),
+            preferencesSelection: PreferencesSelection(),
+            statusBar: testStatusBar())
+        defer { controller.releaseStatusItemsForTesting() }
+
+        let providerModel = try XCTUnwrap(controller.menuCardModel(for: .claude))
+        let compactModel = controller.compactOverviewProviderCardModel(
+            provider: .claude,
+            providerModel: providerModel)
+
+        XCTAssertNil(store.accountSnapshots[.claude])
+        XCTAssertEqual(compactModel.accounts.map(\.identityText), ["Unavailable Claude"])
+        XCTAssertEqual(compactModel.accounts.map(\.statusText), ["Usage unavailable"])
+        XCTAssertTrue(try XCTUnwrap(compactModel.accounts.first).metrics.isEmpty)
+    }
+
     func test_tokenAccountMenuSelectionRefreshesProviderWhileGlobalRefreshIsActive() async throws {
         self.disableMenuCardsForTesting()
         let settings = self.makeSettings()

@@ -50,6 +50,9 @@ extension StatusItemController {
     }
 
     func isMergedOverviewSelected(in menu: NSMenu) -> Bool {
+        if let providers = self.personalCompactOverviewProviders(for: menu) {
+            return !providers.isEmpty
+        }
         guard self.shouldMergeIcons else { return false }
         if let mergedMenu = self.mergedMenu, menu !== mergedMenu { return false }
         let providers = self.settings.resolvedMergedOverviewProviders(

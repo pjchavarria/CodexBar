@@ -914,7 +914,8 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
     }
 
     var shouldMergeIcons: Bool {
-        self.settings.mergeIcons && self.store.enabledProvidersForDisplay().count > 1
+        CodexBarPersonalization.compactOverviewEnabled ||
+            (self.settings.mergeIcons && self.store.enabledProvidersForDisplay().count > 1)
     }
 
     func switchAccountSubtitle(for target: UsageProvider) -> String? {

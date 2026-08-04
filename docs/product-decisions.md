@@ -1,37 +1,60 @@
 # Product Decisions
 
-## 2026-08-03 — Build on CodexBar upstream
+## PD-001 · Build on CodexBar upstream
+- **Status:** locked
+- **Locked:** 2026-08-03
+- **Decision:** Use the open-source CodexBar repository as the product base, retain the canonical project as an upstream
+  Git remote, and isolate personalization behind narrow fork-owned seams.
+- **Why:** The fork should inherit provider, authentication, and maintenance work without recreating CodexBar.
+- **Applies to:** Repository structure, upstream merges, provider behavior, and fork-owned implementation boundaries.
 
-**Status:** Active
+## PD-002 · Make the merged menu a compact overview
+- **Status:** superseded
+- **Locked:** 2026-08-03
+- **Decision:** Use a 310-point overview-only merged menu, with Codex Weekly, Claude Session/Weekly/Fable, and one global
+  cost/token dashboard; the original account layout was vertical and the Claude secondary bars were nested yellow.
+- **Why:** The upstream overview repeated information and consumed too much vertical space.
+- **Applies to:** The merged menu's content hierarchy, quota metrics, and aggregated dashboard.
+- **Superseded by:** PD-003 replaces the account/bar layout; PD-005 replaces the conditional/action boundaries while
+  preserving the compact metrics and global dashboard.
 
-Use the open-source CodexBar repository as the product base instead of recreating it. Keep the canonical upstream as a
-Git remote, isolate personalization behind narrow fork-owned seams, and preserve upstream provider/auth behavior so
-future upstream changes can be merged with minimal conflict.
+## PD-003 · Use the two-column Route B account layout
+- **Status:** locked
+- **Locked:** 2026-08-03
+- **Decision:** Place Codex and Claude accounts in two equal columns at 310 points. Codex shows Weekly only; Claude shows
+  Session, Weekly, and Fable as compact peer bars in the provider color with existing red pacing markers. Keep one
+  globally aggregated dashboard whose daily bars stack provider-colored segments and whose four totals remain global.
+- **Why:** This keeps multiple accounts scannable without widening the menu or repeating dashboards.
+- **Applies to:** Codex/Claude account cards and the bottom cost/token chart.
+- **Supersedes:** PD-002's vertical accounts and nested-yellow Claude bars.
 
-## 2026-08-03 — Make the merged menu a compact overview
+## PD-004 · Use a separate personal application identity
+- **Status:** locked
+- **Locked:** 2026-08-04
+- **Decision:** Install the fork as CodexBar Personal beside upstream CodexBar, with its own bundle/settings identity,
+  one-time settings migration, shared existing account stores, and no upstream Sparkle update feed.
+- **Why:** The fork must be usable daily without being overwritten by upstream releases, while upstream remains an
+  untouched rollback and merge source.
+- **Applies to:** Packaging, signing, settings migration, installation, updates, and rollback.
 
-**Status:** Active
+## PD-005 · Make Route B the complete personal-app surface
+- **Status:** locked
+- **Locked:** 2026-08-04
+- **Decision:** Always use one merged Route B menu, regardless of provider count or previous display settings. Show every
+  configured Codex and Claude account without a cap, including truthful unavailable/error rows. Expose no tabs,
+  separate provider status items, provider submenus, alternate layouts, agent-session rows, or Settings action; retain
+  only Refresh, About, and Quit below the overview.
+- **Why:** The personal app exists solely for the compact, complete account overview; conditional upstream surfaces and
+  bounded projections made the UI inconsistent and hid configured accounts.
+- **Applies to:** Personal-app runtime routing, account projection, menu actions, and unavailable-account behavior.
+- **Supersedes:** PD-002's conditional/provider-action boundaries and any PD-003 implementation that caps account rows.
 
-The merged menu is an overview-only surface at the existing 310-point width. It has no provider tab strip. Codex and
-Claude accounts stack vertically within their provider section. No account or provider owns a usage dashboard; one
-combined cost/token dashboard appears after every provider section. Combine typed usage values before display
-formatting so KPIs, currency, chart points, and accessibility text remain one consistent aggregate.
-
-Codex accounts show Weekly only. Each Claude account has one Weekly group: Weekly is the main bar, with Session and
-Fable nested beneath it; Session and Fable use yellow treatments. The bottom dashboard keeps the four cost/token KPIs
-and graph but omits explanatory detail lines such as top-model and estimated-bill copy. Compact account fan-out is
-limited to Codex and Claude; provider-specific credentials, actions, and the menu-bar visualization remain outside
-this personalization.
-
-## 2026-08-03 — Use the two-column compact account layout
-
-**Status:** Active
-
-Supersede only the vertical-account and nested-yellow-bar clauses in the compact merged-menu decision. Codex and
-Claude accounts use two equal columns at the existing 310-point menu width. Codex keeps Weekly only; Claude shows
-Session, Weekly, and Fable only as equally compact peer rows in Claude's provider color, with the existing red pacing
-and threshold markers intact.
-
-The single bottom dashboard remains globally aggregated, but each daily bar retains provider attribution and stacks
-provider-colored segments with a text legend. The four totals remain global rather than repeating per account or
-provider.
+## PD-006 · Widen Route B for readable account identities
+- **Status:** locked
+- **Locked:** 2026-08-04
+- **Decision:** Keep the two-column Route B menu fixed at 360 points instead of 310 points so ordinary email-length
+  Codex and Claude account identities remain readable without changing the approved layout or adding disclosure UI.
+- **Why:** The installed 310-point menu clipped both Codex identities and the unavailable Claude identity, making the
+  complete account census visually ambiguous.
+- **Applies to:** Personal-app menu width and two-column account identity labels.
+- **Supersedes:** PD-003's 310-point width; its two-column layout and quota composition remain locked.

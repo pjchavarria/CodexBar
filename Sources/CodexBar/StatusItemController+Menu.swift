@@ -465,7 +465,10 @@ extension StatusItemController {
                 to: menu,
                 context: menuContext,
                 switcherSelection: contentSelection)
-            self.addActionableSections(context.descriptor.sections, to: menu, width: context.menuWidth)
+            let sections = self.personalizedActionSections(
+                context.descriptor.sections,
+                usesCompactOverview: self.usesCompactOverview(enabledProviders: context.enabledProviders))
+            self.addActionableSections(sections, to: menu, width: context.menuWidth)
             self.cacheVisibleMergedSwitcherContent(
                 in: menu,
                 selection: contentSelection,
@@ -558,11 +561,7 @@ extension StatusItemController {
         // interaction closures must always reference the live menu they end up serving.
         let interactionMenu = captureMenu ?? menu
         let usesCompactOverview = self.usesCompactOverview(enabledProviders: enabledProviders)
-        let overviewProviders = if usesCompactOverview {
-            Array(enabledProviders.prefix(Self.maxOverviewProviders))
-        } else {
-            self.settings.reconcileMergedOverviewSelectedProviders(activeProviders: enabledProviders)
-        }
+        let overviewProviders = self.personalizedOverviewProviders(enabledProviders)
         let rows: [(provider: UsageProvider, model: UsageMenuCardView.Model)] = overviewProviders
             .compactMap { provider in
                 guard let model = self.menuCardModel(for: provider) else { return nil }
@@ -579,10 +578,11 @@ extension StatusItemController {
         for (index, row) in rows.enumerated() {
             let identifier = "\(Self.overviewRowIdentifierPrefix)\(row.provider.rawValue)"
             let storageText = self.store.storageFootprintText(for: row.provider)
-            let submenu = self.makeOverviewRowSubmenu(
+            let submenu = self.personalizedOverviewSubmenu(
                 provider: row.provider,
                 model: row.model,
-                width: menuWidth)
+                width: menuWidth,
+                usesCompactOverview: usesCompactOverview)
             let item = self.makePersonalizedOverviewCardItem(PersonalizedOverviewCardContext(
                 provider: row.provider,
                 model: row.model,
@@ -1237,6 +1237,7 @@ extension StatusItemController {
     }
 
     func renderedProviders(for menu: NSMenu) -> [UsageProvider] {
+        if let providers = self.personalCompactOverviewProviders(for: menu) { return providers }
         let enabledProviders = self.store.enabledProvidersForDisplay()
         guard !enabledProviders.isEmpty else { return [] }
         let includesOverview = self.includesOverviewTab(enabledProviders: enabledProviders)

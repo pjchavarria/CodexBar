@@ -24,4 +24,20 @@ struct CodexBarLaunchModeTests {
         #expect(CodexBarLaunchMode.resolve(
             arguments: ["/Applications/CodexBar", "--hook-events"]) == .application)
     }
+
+    @Test
+    func `route B strips launcher account scope before discovery`() {
+        let environment = [
+            "CODEX_HOME": "/tmp/codex-account",
+            "CLAUDE_CONFIG_DIR": "/tmp/claude-account",
+            "PATH": "/usr/bin:/bin",
+        ]
+
+        #expect(CodexBarPersonalization.sanitizedLaunchEnvironment(
+            featureEnabled: true,
+            environment: environment) == ["PATH": "/usr/bin:/bin"])
+        #expect(CodexBarPersonalization.sanitizedLaunchEnvironment(
+            featureEnabled: false,
+            environment: environment) == environment)
+    }
 }
