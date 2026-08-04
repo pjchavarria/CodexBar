@@ -8,12 +8,7 @@ struct CompactOverviewProviderCardModel {
         let identityText: String
         let planText: String?
         let statusText: String?
-        let weeklyMetric: UsageMenuCardView.Model.Metric?
-        let weeklyDetails: [UsageMenuCardView.Model.Metric]
-
-        var metrics: [UsageMenuCardView.Model.Metric] {
-            [self.weeklyMetric].compactMap(\.self) + self.weeklyDetails
-        }
+        let metrics: [UsageMenuCardView.Model.Metric]
     }
 
     let provider: UsageProvider
@@ -37,8 +32,7 @@ struct CompactOverviewProviderCardModel {
                 identityText: Self.accountIdentityText(account.model),
                 planText: account.model.planText,
                 statusText: Self.accountStatusText(account.model),
-                weeklyMetric: metrics.first,
-                weeklyDetails: Array(metrics.dropFirst()))
+                metrics: metrics)
         }
         self.progressColor = providerModel.progressColor
         self.heightFingerprint = accountModels.map { account in
@@ -53,8 +47,8 @@ struct CompactOverviewProviderCardModel {
         case .codex:
             model.metrics.filter { $0.id == "secondary" }
         case .claude:
-            model.metrics.filter { $0.id == "secondary" } +
-                model.metrics.filter { $0.id == "primary" } +
+            model.metrics.filter { $0.id == "primary" } +
+                model.metrics.filter { $0.id == "secondary" } +
                 model.metrics.filter(self.isFableOnly)
         default:
             model.metrics
@@ -83,6 +77,8 @@ struct CompactOverviewProviderCardModel {
 }
 
 struct CompactOverviewProviderCardView: View {
+    static let accountColumnCount = 2
+
     let model: CompactOverviewProviderCardModel
     let width: CGFloat
     @Environment(\.menuItemHighlighted) private var isHighlighted
@@ -91,19 +87,32 @@ struct CompactOverviewProviderCardView: View {
         VStack(alignment: .leading, spacing: 0) {
             self.providerHeader
             Divider()
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(self.model.accounts.enumerated()), id: \.element.id) { index, account in
-                    if index > 0 {
-                        Divider()
-                            .padding(.vertical, 8)
-                    }
-                    self.account(account)
-                }
-            }
-            .padding(.horizontal, UsageMenuCardLayout.horizontalPadding)
-            .padding(.vertical, 8)
+            self.accountGrid
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
         }
         .frame(width: self.width, alignment: .leading)
+    }
+
+    private var accountGrid: some View {
+        LazyVGrid(
+            columns: Array(
+                repeating: GridItem(.flexible(minimum: 0), spacing: 10, alignment: .topLeading),
+                count: Self.accountColumnCount),
+            alignment: .leading,
+            spacing: 10)
+        {
+            ForEach(self.model.accounts) { account in
+                self.account(account)
+            }
+        }
+        .overlay {
+            if self.model.accounts.count > 1 {
+                Rectangle()
+                    .fill(Color(nsColor: .separatorColor))
+                    .frame(width: 1)
+            }
+        }
     }
 
     private var providerHeader: some View {
@@ -125,25 +134,23 @@ struct CompactOverviewProviderCardView: View {
                 .minimumScaleFactor(0.8)
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, UsageMenuCardLayout.horizontalPadding)
+        .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .accessibilityElement(children: .combine)
     }
 
     private func account(_ account: CompactOverviewProviderCardModel.Account) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack(alignment: .firstTextBaseline, spacing: 5) {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(account.identityText)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
+                    .font(.caption)
+                    .fontWeight(.semibold)
                     .foregroundStyle(MenuHighlightStyle.primary(self.isHighlighted))
                     .lineLimit(1)
                     .truncationMode(.middle)
                 if let planText = account.planText, !planText.isEmpty {
-                    Text("·")
-                        .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
-                    Text(planText)
-                        .font(.subheadline)
+                    Text(Self.compactPlanText(planText))
+                        .font(.caption2)
                         .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                         .lineLimit(1)
                 }
@@ -157,18 +164,8 @@ struct CompactOverviewProviderCardView: View {
                     .lineLimit(2)
             }
 
-            if let weeklyMetric = account.weeklyMetric {
-                self.metric(weeklyMetric, isWeeklyDetail: false)
-            } else if !account.weeklyDetails.isEmpty {
-                Text(L("Weekly"))
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(MenuHighlightStyle.primary(self.isHighlighted))
-            }
-
-            ForEach(account.weeklyDetails) { metric in
-                self.metric(metric, isWeeklyDetail: true)
-                    .padding(.leading, 10)
+            ForEach(account.metrics) { metric in
+                self.metric(metric)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -176,32 +173,28 @@ struct CompactOverviewProviderCardView: View {
         .accessibilityLabel(account.identityText)
     }
 
-    private func metric(
-        _ metric: UsageMenuCardView.Model.Metric,
-        isWeeklyDetail: Bool) -> some View
-    {
-        let tint = self.model.provider == .claude && isWeeklyDetail
-            ? Color(nsColor: .systemYellow)
-            : self.model.progressColor
+    private func metric(_ metric: UsageMenuCardView.Model.Metric) -> some View {
+        let tint = self.model.progressColor
         return VStack(alignment: .leading, spacing: 3) {
-            HStack(alignment: .firstTextBaseline, spacing: 5) {
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
                 Text(metric.title)
-                    .font(isWeeklyDetail ? .caption : .subheadline)
-                    .fontWeight(isWeeklyDetail ? .regular : .medium)
+                    .font(.caption2)
+                    .fontWeight(.semibold)
                     .foregroundStyle(MenuHighlightStyle.primary(self.isHighlighted))
                     .lineLimit(1)
                 if metric.statusText == nil {
-                    Text("· \(metric.percentLabel)")
-                        .font(.caption)
+                    Text(UsageFormatter.percentString(metric.percent))
+                        .font(.caption2)
                         .foregroundStyle(MenuHighlightStyle.progressTint(self.isHighlighted, fallback: tint))
                         .lineLimit(1)
                 }
-                Spacer(minLength: 4)
+                Spacer(minLength: 2)
                 if let resetText = metric.resetText {
-                    Text(resetText)
+                    Text(Self.compactResetText(resetText))
                         .font(.caption2)
                         .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                         .lineLimit(1)
+                        .accessibilityLabel(resetText)
                 }
             }
             if let statusText = metric.statusText {
@@ -218,26 +211,18 @@ struct CompactOverviewProviderCardView: View {
                     paceOnTop: metric.paceOnTop,
                     warningMarkerPercents: metric.warningMarkerPercents,
                     workdayMarkerPercents: metric.workdayMarkerPercents)
-                if metric.detailLeftText != nil || metric.detailRightText != nil {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        if let detailLeftText = metric.detailLeftText {
-                            Text(detailLeftText)
-                                .font(.caption2)
-                                .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
-                                .lineLimit(1)
-                        }
-                        Spacer(minLength: 4)
-                        if let detailRightText = metric.detailRightText {
-                            Text(detailRightText)
-                                .font(.caption2)
-                                .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
-                                .lineLimit(1)
-                        }
-                    }
-                }
             }
         }
-        .padding(.top, 2)
         .accessibilityElement(children: .combine)
+    }
+
+    private static func compactPlanText(_ planText: String) -> String {
+        planText.split(whereSeparator: { $0.isWhitespace }).last.map(String.init) ?? planText
+    }
+
+    private static func compactResetText(_ resetText: String) -> String {
+        let parts = resetText.split(whereSeparator: { $0.isWhitespace })
+        guard parts.count > 2 else { return resetText }
+        return parts.suffix(2).joined(separator: " ")
     }
 }

@@ -22,3 +22,16 @@ Fable nested beneath it; Session and Fable use yellow treatments. The bottom das
 and graph but omits explanatory detail lines such as top-model and estimated-bill copy. Compact account fan-out is
 limited to Codex and Claude; provider-specific credentials, actions, and the menu-bar visualization remain outside
 this personalization.
+
+## 2026-08-03 — Use the two-column compact account layout
+
+**Status:** Active
+
+Supersede only the vertical-account and nested-yellow-bar clauses in the compact merged-menu decision. Codex and
+Claude accounts use two equal columns at the existing 310-point menu width. Codex keeps Weekly only; Claude shows
+Session, Weekly, and Fable only as equally compact peer rows in Claude's provider color, with the existing red pacing
+and threshold markers intact.
+
+The single bottom dashboard remains globally aggregated, but each daily bar retains provider attribution and stacks
+provider-colored segments with a text legend. The four totals remain global rather than repeating per account or
+provider.

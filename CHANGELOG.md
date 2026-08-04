@@ -12,6 +12,8 @@
 - Menu bar: Session/Weekly/Auto pace layout tokens that render the signed pace delta (`+11%`, `-8%`, `0%`), restoring the pre-0.45 "Both" display in the layout editor (#2540, fixes #2534). Thanks @kratocz!
 
 ### Fixed
+- Dev: local rebuilds no longer auto-select an unrelated signing identity that macOS rejects against CodexBar's
+  provisioning profile; they fall back to the existing ad-hoc path unless a CodexBar identity is available.
 - Cursor: make on-demand extra usage follow the shared optional-usage setting and remove the unsupported credits placeholder (#2338). Thanks @Zihao-Qi!
 - Antigravity/Sessions: inspect processes in-process via libproc instead of spawning full-system ps/lsof, eliminating repeated macOS 26 “access data from other apps” prompts (#2267 hardening).
 - Doubao: show Agent Plan windows alongside Coding Plan usage for Volcengine AK/SK accounts that subscribe to both products (#2517). Thanks @Astro-Han!
@@ -36,6 +38,8 @@
 - Menu: switching provider tabs no longer flashes. The sibling-tab warmup now runs off a tracking-safe timer (the previous Task-based warmup never fired while the menu was open, which is the only time it matters), and provider tabs share one stable menu height via an invisible spacer, so a switch is a single-frame content swap with no window resize. Verified frame-by-frame with a new env-gated self-probe (`CODEXBAR_FLICKER_PROBE_DIR`).
 
 ### Changed
+- Personalization: compact merged overviews now place Codex and Claude accounts in two columns, keep Claude's three
+  quota bars equally compact, and split the global cost chart into labeled provider-colored stacks.
 - About: link the Website entry to codex.bar.
 
 ## 0.46.0 — 2026-07-29

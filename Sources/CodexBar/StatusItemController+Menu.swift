@@ -597,8 +597,16 @@ extension StatusItemController {
                 menu.addItem(.separator())
             }
         }
+        let dashboardInputs = rows.compactMap { row in
+            row.model.inlineUsageDashboard.map { dashboard in
+                CompactOverviewDashboard.Input(
+                    provider: row.provider,
+                    providerName: row.model.providerName,
+                    dashboard: dashboard)
+            }
+        }
         if usesCompactOverview,
-           let dashboard = CompactOverviewDashboard.aggregate(rows.compactMap(\.model.inlineUsageDashboard))
+           let dashboard = CompactOverviewDashboard.aggregate(dashboardInputs)
         {
             menu.addItem(.separator())
             menu.addItem(self.makeCompactOverviewDashboardItem(dashboard, width: menuWidth))

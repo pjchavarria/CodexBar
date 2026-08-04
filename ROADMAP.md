@@ -2,7 +2,8 @@
 
 ## Active
 
-- [Compact multi-account overview](docs/compact-overview.md) — implement and validate the fork's primary menu.
+- [Compact multi-account overview](docs/compact-overview.md) — Route B is implemented; validate every real account and
+  typed provider stack in a signing-enabled run.
 
 ## Later
 

@@ -14,9 +14,10 @@
 - **Last verified:** 2026-08-03
 - **Use when:** Updating the compact multi-account overview or merging upstream menu/account changes.
 - **Knowledge:** Keep fork-only composition behind `CodexBarPersonalization` and dedicated views/extensions. The compact
-  menu stacks every Codex and Claude account snapshot, groups Claude Session and Fable beneath Weekly, renders one
-  combined cost/token dashboard after every provider section, and stays at 310 points. Retain typed cost/token values
-  through overview aggregation; formatting KPIs or accessibility text earlier can make them disagree with the chart.
+  menu lays every Codex and Claude account snapshot into two columns, shows Claude Session, Weekly, and Fable as peer
+  bars, renders one combined cost/token dashboard after every provider section, and stays at 310 points. Retain typed
+  cost/token values and provider identity through overview aggregation; formatting KPIs or accessibility text earlier
+  can make them disagree with the provider-stacked chart.
 - **Why:** A narrow seam minimizes upstream conflicts while preventing UI-only changes from widening credentials or network activity.
 - **Evidence:** `Sources/CodexBar/CodexBarPersonalization.swift`,
   `Sources/CodexBar/CompactOverviewProviderCard.swift`, `Sources/CodexBar/UsageStore+CompactOverview.swift`,

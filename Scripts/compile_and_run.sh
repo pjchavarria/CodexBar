@@ -64,27 +64,6 @@ has_signing_identity() {
   security find-identity -p codesigning -v 2>/dev/null | grep -F "${identity}" >/dev/null 2>&1
 }
 
-detect_codesigning_identity() {
-  local preferred_prefixes=(
-    "Developer ID Application:"
-    "Apple Development:"
-    "Apple Distribution:"
-  )
-  local prefix
-  local identities
-  identities="$(security find-identity -p codesigning -v 2>/dev/null || true)"
-  for prefix in "${preferred_prefixes[@]}"; do
-    awk -v prefix="${prefix}" '
-      index($0, "\"" prefix) {
-        sub(/^[^\"]*\"/, "")
-        sub(/\".*$/, "")
-        print
-        exit
-      }
-    ' <<<"${identities}"
-  done | sed -n '1p'
-}
-
 export_team_id_from_identity() {
   local identity="${1:-}"
   if [[ -n "${APP_TEAM_ID:-}" || -z "${identity}" ]]; then
@@ -135,15 +114,10 @@ resolve_signing_mode() {
     fi
   done
 
-  candidate="$(detect_codesigning_identity)"
-  if [[ -n "${candidate}" ]]; then
-    APP_IDENTITY="${candidate}"
-    export APP_IDENTITY
-    export_team_id_from_identity "${APP_IDENTITY}"
-    SIGNING_MODE="identity"
-    return
-  fi
-
+  # An arbitrary development identity can produce a valid code seal while still
+  # being rejected at launch because it does not match CodexBar's provisioning
+  # profile. Callers can opt into a specific identity with APP_IDENTITY; automatic
+  # discovery is deliberately limited to the CodexBar identities above.
   SIGNING_MODE="adhoc"
 }
 

@@ -118,15 +118,33 @@ struct UsageMenuCardLayoutTests {
                     .init(id: "1", label: "Mon", value: 4, accessibilityValue: "Monday: $4"),
                     .init(id: "2", label: "Tue", value: 12, accessibilityValue: "Tuesday: $12"),
                 ]))
+        let claudeDashboard = InlineUsageDashboardModel(
+            accessibilityLabel: "30 day Claude usage",
+            valueStyle: .currencyUSD,
+            kpis: [],
+            points: [],
+            detailLines: [],
+            currencyCode: "USD",
+            costAggregation: .init(
+                currencyCode: "USD",
+                historyDays: 30,
+                todayCost: 7,
+                historyCost: 9,
+                latestTokens: 30,
+                historyTokens: 300,
+                points: [
+                    .init(id: "1", label: "Mon", value: 1, accessibilityValue: "Monday: $1"),
+                    .init(id: "2", label: "Tue", value: 3, accessibilityValue: "Tuesday: $3"),
+                ]))
         let codexMetrics = [
             Self.metric(id: "primary", title: "Session", percent: 80),
-            Self.metric(id: "secondary", title: "Weekly", percent: 61),
+            Self.metric(id: "secondary", title: "Weekly", percent: 61, pacePercent: 78, paceOnTop: false),
             Self.metric(id: "codex-spark-weekly", title: "Codex Spark Weekly", percent: 100),
             Self.metric(id: "code-review", title: "Code review", percent: 66),
         ]
         let claudeMetrics = [
-            Self.metric(id: "primary", title: "Session", percent: 92),
-            Self.metric(id: "secondary", title: "Weekly", percent: 38),
+            Self.metric(id: "primary", title: "Session", percent: 92, pacePercent: 84, paceOnTop: false),
+            Self.metric(id: "secondary", title: "Weekly", percent: 38, pacePercent: 72, paceOnTop: false),
             Self.metric(id: "claude-weekly-scoped-fable", title: "Fable only", percent: 23),
             Self.metric(id: "claude-routines", title: "Routines", percent: 50),
         ]
@@ -167,19 +185,24 @@ struct UsageMenuCardLayoutTests {
 
         #expect(codexModel.accounts.allSatisfy { $0.metrics.map(\.id) == ["secondary"] })
         #expect(claudeModel.accounts.allSatisfy {
-            $0.metrics.map(\.id) == ["secondary", "primary", "claude-weekly-scoped-fable"]
+            $0.metrics.map(\.id) == ["primary", "secondary", "claude-weekly-scoped-fable"]
         })
-        #expect(claudeModel.accounts.allSatisfy { $0.weeklyMetric?.id == "secondary" })
-        #expect(claudeModel.accounts.allSatisfy {
-            $0.weeklyDetails.map(\.id) == ["primary", "claude-weekly-scoped-fable"]
-        })
-        let aggregateDashboard = try #require(CompactOverviewDashboard.aggregate([dashboard, dashboard]))
-        #expect(aggregateDashboard.detailLines.isEmpty)
-        #expect(aggregateDashboard.costAggregation?.todayCost == 24)
-        #expect(aggregateDashboard.costAggregation?.historyCost == 32)
-        #expect(aggregateDashboard.costAggregation?.latestTokens == 200)
-        #expect(aggregateDashboard.costAggregation?.historyTokens == 2000)
-        #expect(aggregateDashboard.points.map(\.value) == [8, 24])
+        #expect(CompactOverviewProviderCardView.accountColumnCount == 2)
+        let aggregateDashboard = try #require(CompactOverviewDashboard.aggregate([
+            .init(provider: .codex, providerName: "Codex", dashboard: dashboard),
+            .init(provider: .claude, providerName: "Claude", dashboard: claudeDashboard),
+        ]))
+        #expect(aggregateDashboard.aggregate.detailLines.isEmpty)
+        #expect(aggregateDashboard.aggregate.costAggregation?.todayCost == 19)
+        #expect(aggregateDashboard.aggregate.costAggregation?.historyCost == 25)
+        #expect(aggregateDashboard.aggregate.costAggregation?.latestTokens == 130)
+        #expect(aggregateDashboard.aggregate.costAggregation?.historyTokens == 1300)
+        #expect(aggregateDashboard.aggregate.points.map(\.value) == [5, 15])
+        #expect(aggregateDashboard.providerSeries.map(\.provider) == [.codex, .claude])
+        #expect(aggregateDashboard.providerSeries.map(\.providerName) == ["Codex", "Claude"])
+        #expect(aggregateDashboard.days.map(\.total) == [5, 15])
+        #expect(aggregateDashboard.days[0].segments.map(\.value) == [4, 1])
+        #expect(aggregateDashboard.days[1].segments.map(\.value) == [12, 3])
 
         let width = StatusItemController.menuCardBaseWidth
         let preview = VStack(spacing: 0) {
@@ -249,7 +272,9 @@ struct UsageMenuCardLayoutTests {
     private static func metric(
         id: String,
         title: String,
-        percent: Double) -> UsageMenuCardView.Model.Metric
+        percent: Double,
+        pacePercent: Double? = nil,
+        paceOnTop: Bool = true) -> UsageMenuCardView.Model.Metric
     {
         UsageMenuCardView.Model.Metric(
             id: id,
@@ -260,8 +285,8 @@ struct UsageMenuCardLayoutTests {
             detailText: nil,
             detailLeftText: nil,
             detailRightText: nil,
-            pacePercent: nil,
-            paceOnTop: true)
+            pacePercent: pacePercent,
+            paceOnTop: paceOnTop)
     }
 
     private static func writeSnapshotIfRequested(
@@ -320,6 +345,6 @@ struct UsageMenuCardLayoutTests {
             providerCost: nil,
             tokenUsage: nil,
             placeholder: placeholder,
-            progressColor: .blue)
+            progressColor: UsageMenuCardView.Model.progressColor(for: provider))
     }
 }

@@ -89,7 +89,7 @@ extension StatusItemController {
     }
 
     func makeCompactOverviewDashboardItem(
-        _ dashboard: InlineUsageDashboardModel,
+        _ dashboard: CompactOverviewDashboardModel,
         width: CGFloat) -> NSMenuItem
     {
         self.makeMenuCardItem(
@@ -97,8 +97,7 @@ extension StatusItemController {
             id: "compactOverviewDashboard",
             width: width,
             heightCacheScope: "compact-overview-dashboard",
-            heightCacheFingerprint: dashboard.kpis.map { "\($0.title)=\($0.value)" }.joined(separator: "|") +
-                "|points=\(dashboard.points.count)",
+            heightCacheFingerprint: dashboard.heightFingerprint,
             submenu: nil,
             containsInteractiveControls: false,
             usesGPUSelection: true)
