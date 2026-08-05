@@ -157,7 +157,7 @@ struct UsageMenuCardLayoutTests {
         let claudeAccount = Self.model(
             provider: .claude,
             email: "Personal",
-            planText: "Max 20x",
+            planText: "-swap",
             metrics: claudeMetrics,
             dashboard: dashboard)
         let codexModel = CompactOverviewProviderCardModel(
@@ -177,7 +177,7 @@ struct UsageMenuCardLayoutTests {
                 (id: "claude-\(index)", model: Self.model(
                     provider: .claude,
                     email: "reviewer0\(index)@example.com",
-                    planText: "Max 20x",
+                    planText: "-swap",
                     metrics: index == 8 ? [] : claudeMetrics,
                     placeholder: index == 8 ? "Usage unavailable" : nil,
                     dashboard: dashboard))
@@ -211,7 +211,7 @@ struct UsageMenuCardLayoutTests {
         #expect(aggregateDashboard.days[1].segments.map(\.value) == [12, 3])
 
         let width = CodexBarPersonalization.compactOverviewMenuWidth
-        #expect(width == 360)
+        #expect(width == 380)
         let preview = VStack(spacing: 0) {
             CompactOverviewProviderCardView(model: codexModel, width: width)
             Divider()

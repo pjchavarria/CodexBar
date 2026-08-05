@@ -52,9 +52,11 @@
 ## PD-006 · Widen Route B for readable account identities
 - **Status:** locked
 - **Locked:** 2026-08-04
-- **Decision:** Keep the two-column Route B menu fixed at 360 points instead of 310 points so ordinary email-length
-  Codex and Claude account identities remain readable without changing the approved layout or adding disclosure UI.
-- **Why:** The installed 310-point menu clipped both Codex identities and the unavailable Claude identity, making the
-  complete account census visually ambiguous.
+- **Decision:** Keep the two-column Route B menu fixed at 380 points instead of 310 points so ordinary email-length
+  Codex and Claude account identities plus required inline suffixes remain readable without changing the approved
+  layout or adding disclosure UI.
+- **Why:** The installed 310-point menu clipped both Codex identities and the unavailable Claude identity; a 360-point
+  correction still clipped the longer Claude identity beside `-swap`, so the complete account census remained
+  visually ambiguous.
 - **Applies to:** Personal-app menu width and two-column account identity labels.
 - **Supersedes:** PD-003's 310-point width; its two-column layout and quota composition remain locked.

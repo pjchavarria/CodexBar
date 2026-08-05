@@ -5,7 +5,7 @@ import Foundation
 /// Fork-owned presentation choices kept behind one seam so upstream updates stay easy to merge.
 @MainActor
 enum CodexBarPersonalization {
-    static let compactOverviewMenuWidth: CGFloat = 360
+    static let compactOverviewMenuWidth: CGFloat = 380
 
     private nonisolated static let accountScopedLaunchEnvironmentKeys = [
         "CODEX_HOME",

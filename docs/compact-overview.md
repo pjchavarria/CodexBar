@@ -4,7 +4,7 @@ _Status: shipped · 2026-08-04_
 
 ## Resume here
 
-Keep the approved Route B compact overview working at 360 points in the separately installed CodexBar Personal app,
+Keep the approved Route B compact overview working at 380 points in the separately installed CodexBar Personal app,
 validate it with synthetic rendering and packaged-app runtime geometry, then merge future upstream releases into the
 fork without spreading personalization into provider code.
 
@@ -23,8 +23,8 @@ fork without spreading personalization into provider code.
 
 ## Direction
 
-- Keep the merged menu fixed at `CodexBarPersonalization.compactOverviewMenuWidth` (360 points) so ordinary account
-  identities remain readable in both columns.
+- Keep the merged menu fixed at `CodexBarPersonalization.compactOverviewMenuWidth` (380 points) so ordinary account
+  identities plus required inline suffixes remain readable in both columns.
 - Always open the merged multi-provider menu on Overview and omit the provider switcher.
 - Lay every available Codex or Claude account into two equal columns within its provider section.
 - Do not cap the account grid or drop an account when usage is missing, stale, or failed; render its identity and
@@ -69,5 +69,5 @@ separates every available typed cost source without duplicating provider section
   every configured Codex and Claude account.
 - 2026-08-04: User removed every non-Route-B surface and required the overview to retain every configured account,
   including accounts whose usage cannot be fetched.
-- 2026-08-04: The live two-column menu proved 310 points too narrow for ordinary email-length identities; the user
-  locked Route B to a wider 360-point menu.
+- 2026-08-04: The live two-column menu proved 310 points too narrow for ordinary email-length identities, and the first
+  360-point correction still clipped a Claude identity beside `-swap`; Route B now uses 380 points.

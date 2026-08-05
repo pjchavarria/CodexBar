@@ -14,7 +14,7 @@
 - **Last verified:** 2026-08-04
 - **Use when:** Updating the compact multi-account overview or merging upstream menu/account changes.
 - **Knowledge:** Keep fork-only composition behind `CodexBarPersonalization` and dedicated views/extensions, but do not
-  make Route B conditional on merged-icon or provider-count settings. The 360-point menu lays every configured Codex
+  make Route B conditional on merged-icon or provider-count settings. The 380-point menu lays every configured Codex
   and Claude account into two columns without the upstream six-account cap, keeps ordinary email-length identities
   readable, and keeps failed or unavailable accounts visible with truthful status. It exposes no provider tabs,
   provider submenus, alternate layouts, or customization
