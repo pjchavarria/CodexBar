@@ -4,7 +4,7 @@ _Status: shipped · 2026-08-04_
 
 ## Resume here
 
-Keep the approved Route B compact overview working at 380 points in the separately installed CodexBar Personal app,
+Keep the approved Route B compact overview working at 420 points in the separately installed CodexBar Personal app,
 validate it with synthetic rendering and packaged-app runtime geometry, then merge future upstream releases into the
 fork without spreading personalization into provider code.
 
@@ -14,7 +14,7 @@ fork without spreading personalization into provider code.
   canonical project in the working checkout.
 - CodexBar already owns account discovery, account-scoped quota snapshots, inline usage dashboards, refresh actions,
   settings, and provider submenus.
-- The fork adds a presentation seam, a compact provider card, and account-to-card projection. It does not add another
+- The fork adds a presentation seam, a compact account-card grid, and account-to-card projection. It does not add another
   credential store, fetcher, parser, or chart data source.
 - `Scripts/install_personal_app.sh` packages and installs `/Applications/CodexBar Personal.app` with a separate bundle
   identity, imports upstream settings once, uses the existing shared account stores, and leaves upstream CodexBar intact.
@@ -23,10 +23,11 @@ fork without spreading personalization into provider code.
 
 ## Direction
 
-- Keep the merged menu fixed at `CodexBarPersonalization.compactOverviewMenuWidth` (380 points) so ordinary account
-  identities plus required inline suffixes remain readable in both columns.
+- Keep the merged menu fixed at `CodexBarPersonalization.compactOverviewMenuWidth` (420 points) so complete account
+  cards and ordinary identities remain readable in both columns.
 - Always open the merged multi-provider menu on Overview and omit the provider switcher.
-- Lay every available Codex or Claude account into two equal columns within its provider section.
+- Lay every available account into one two-column grid. Each card repeats the provider icon/name, account identity,
+  truthful error state, and that provider's quota rows; keep same-provider accounts adjacent.
 - Do not cap the account grid or drop an account when usage is missing, stale, or failed; render its identity and
   truthful status while retaining the same two-column flow.
 - Keep every enabled provider in Route B even when its current fetch is error-only. Google Antigravity reads real usage
@@ -42,8 +43,8 @@ fork without spreading personalization into provider code.
   model at the bottom of the entire overview, without dashboard detail lines. Keep the four KPIs global while stacking
   each chart day by provider color with a text legend. Aggregate retained typed usage values and provider identity
   before currency, token totals, chart points, and accessibility text are formatted.
-- Route B is the only runtime menu: do not attach provider tabs, submenus, alternate layouts, agent-session rows, or a
-  Settings action. Keep bottom Refresh, About, and Quit actions.
+- Route B is the only runtime menu: do not attach provider tabs, submenus, alternate layouts, or agent-session rows.
+  Keep bottom Refresh, Settings, and Quit actions.
 - Leave the status-item visualization unchanged until a later design decision.
 
 ## Upstream compatibility boundary
@@ -58,22 +59,20 @@ layout proof plus the repository test/check commands, then inspect the synthetic
 ## Next checkpoint
 
 Keep the installed personal app current by merging `upstream/main`, rerunning the personal installer, and confirming
-that every known Codex and Claude account identity appears in its two-column provider grid, every enabled provider has
-a visible truthful state, and the bottom chart separates every available typed cost source without duplicating
-provider sections.
+that every known account identity from every enabled provider appears in the two-column card grid, every enabled
+provider has a visible truthful state, and the bottom chart separates every available typed cost source without
+duplicating account cards.
 
-## Open account-card iteration
+## Open rebrand iteration
 
-The next visual direction is proposed, not approved or implemented. Replace provider-sized sections with one consistent
-self-contained card per account in a two-column grid. Pair the two Codex cards, pair the two Claude cards, then place
-Cursor beside Grok and leave Antigravity as the final half-width card. Every card owns the same provider, identity,
-quota, reset, pacing-marker, and error grammar; providers with more quota windows simply render more meter rows. Keep
-the combined provider-colored cost/token dashboard below the grid. The current 420-point mock is intentionally wider
-than the shipped 380-point menu so representative account identities remain on one line.
+The account-card mock is approved and implemented. The remaining design decision is the sellable product identity.
+`QuotaRoom` is the current recommended name after eliminating direct-category collisions. The recommended icon system
+uses the rendered full-color open frame for the app, Dock, and storefront, plus a simplified monochrome frame-and-notch
+template glyph for the menu bar. Neither is approved or wired into the app yet. Domain registry availability is not
+trademark clearance or registrar purchase proof.
 
-No live layout changes until the user marks up and approves the mock. The missing first Codex credential is a separate
-runtime defect: the current installed app has one managed credential and its live login resolves to that same identity,
-so the second Codex card cannot regain live usage without one account-scoped authentication checkpoint.
+The missing first Codex credential remains a separate runtime defect: the installed app can only show independently
+usable usage for credentials that have completed the managed-account authentication checkpoint.
 
 ## Direction log
 
@@ -95,5 +94,10 @@ so the second Codex card cannot regain live usage without one account-scoped aut
 - 2026-08-05: The user required Google, Cursor, and other enabled providers to remain visible in Route B while explicitly
   deferring reviewer routing.
 - 2026-08-05: The user opened a new account-card mock iteration: one consistent self-contained card per account in two
-  columns, with same-provider accounts adjacent and Antigravity as the final unpaired card. Implementation remains
-  paused pending visual approval.
+  columns, with same-provider accounts adjacent and Antigravity as the final unpaired card.
+- 2026-08-05: The user approved the account-card mock, widened the live layout to the mock's 420 points, and replaced
+  About with Settings in the only bottom action set.
+- 2026-08-05: The user locked the intent to sell the fork under a new provider-neutral product name and icon; exact
+  branding remains open pending approval of the researched render.
+- 2026-08-05: Rebrand research kept QuotaRoom over the more natural Spare because Spare has a direct AI-brand
+  collision, and sharpened icon A into separate full-color app/storefront artwork and a monochrome menu-bar template.

@@ -19,7 +19,7 @@
   preserving the compact metrics and global dashboard.
 
 ## PD-003 · Use the two-column Route B account layout
-- **Status:** locked
+- **Status:** superseded
 - **Locked:** 2026-08-03
 - **Decision:** Place Codex and Claude accounts in two equal columns at 310 points. Codex shows Weekly only; Claude shows
   Session, Weekly, and Fable as compact peer bars in the provider color with existing red pacing markers. Keep one
@@ -27,6 +27,7 @@
 - **Why:** This keeps multiple accounts scannable without widening the menu or repeating dashboards.
 - **Applies to:** Codex/Claude account cards and the bottom cost/token chart.
 - **Supersedes:** PD-002's vertical accounts and nested-yellow Claude bars.
+- **Superseded by:** PD-009 keeps the two-column structure but makes every account its own provider-labeled card.
 
 ## PD-004 · Use a separate personal application identity
 - **Status:** locked
@@ -38,7 +39,7 @@
 - **Applies to:** Packaging, signing, settings migration, installation, updates, and rollback.
 
 ## PD-005 · Make Route B the complete personal-app surface
-- **Status:** locked
+- **Status:** superseded
 - **Locked:** 2026-08-04
 - **Decision:** Always use one merged Route B menu, regardless of provider count or previous display settings. Show every
   configured Codex and Claude account without a cap, including truthful unavailable/error rows. Expose no tabs,
@@ -48,9 +49,11 @@
   bounded projections made the UI inconsistent and hid configured accounts.
 - **Applies to:** Personal-app runtime routing, account projection, menu actions, and unavailable-account behavior.
 - **Supersedes:** PD-002's conditional/provider-action boundaries and any PD-003 implementation that caps account rows.
+- **Superseded by:** PD-009 preserves the one-surface/no-cap rule while replacing provider sections and About with
+  account cards and Settings.
 
 ## PD-006 · Widen Route B for readable account identities
-- **Status:** locked
+- **Status:** superseded
 - **Locked:** 2026-08-04
 - **Decision:** Keep the two-column Route B menu fixed at 380 points instead of 310 points so ordinary email-length
   Codex and Claude account identities plus required inline suffixes remain readable without changing the approved
@@ -60,6 +63,7 @@
   visually ambiguous.
 - **Applies to:** Personal-app menu width and two-column account identity labels.
 - **Supersedes:** PD-003's 310-point width; its two-column layout and quota composition remain locked.
+- **Superseded by:** PD-009 widens the approved account-card grid to 420 points.
 
 ## PD-007 · Separate monitored Codex accounts from the live Codex login
 - **Status:** locked
@@ -83,3 +87,30 @@
 - **Why:** Provider disappearance was being mistaken for missing configuration, while fabricating quota from an
   authentication-only CLI would be misleading.
 - **Applies to:** Route B provider visibility, Cursor fallback behavior, Antigravity enablement, and reviewer routing.
+
+## PD-009 · Make every account a self-contained card
+- **Status:** locked
+- **Locked:** 2026-08-05
+- **Decision:** Route B is one 420-point, two-column grid of self-contained account cards. Keep accounts from the same
+  provider adjacent, then continue in enabled-provider order; an unpaired final account occupies the left column. Every
+  card owns its provider icon/name, full account identity, truthful error state, and provider-specific quota rows.
+  Codex keeps Weekly; Claude keeps Session, Weekly, and Fable as compact peer bars; other providers keep their available
+  quota rows. Keep the single provider-colored aggregate dashboard below the grid. Keep only Refresh, Settings, and Quit
+  below the dashboard.
+- **Why:** Provider-sized sections made the five enabled services feel unrelated and prevented Cursor and Grok from
+  sharing one scan row. Repeating one complete card grammar makes additional accounts and services predictable.
+- **Applies to:** Personal-app menu width, account/provider composition, quota/error presentation, dashboard placement,
+  and bottom actions.
+- **Supersedes:** PD-003's provider-section grid, PD-005's About action, and PD-006's 380-point width.
+
+## PD-010 · Give the sellable fork an independent identity
+- **Status:** locked
+- **Locked:** 2026-08-05
+- **Decision:** Replace the CodexBar product name and terminal-style icon with an independent, provider-neutral name and
+  icon before selling the app. Keep the upstream MIT copyright and permission notice in distributed copies. The exact
+  public name, icon construction, bundle identifier, and domain remain open until the user approves the rendered brand
+  direction and collision checks are complete.
+- **Why:** A multi-provider paid product should not present itself as a Codex-only derivative or reuse upstream's
+  terminal-command identity.
+- **Applies to:** Public naming, application icon, bundle/display name, packaging, release artifacts, storefront, and
+  license notices.

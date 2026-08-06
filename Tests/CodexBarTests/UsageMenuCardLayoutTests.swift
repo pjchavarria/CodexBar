@@ -193,7 +193,20 @@ struct UsageMenuCardLayoutTests {
             $0.metrics.map(\.id) == ["primary", "secondary", "claude-weekly-scoped-fable"]
         })
         #expect(claudeModel.accounts.last?.metrics.isEmpty == true)
-        #expect(CompactOverviewProviderCardView.accountColumnCount == 2)
+        let accountGrid = CompactOverviewAccountGridModel(providerModels: [codexModel, claudeModel])
+        #expect(accountGrid.cards.count == 16)
+        #expect(accountGrid.cards.prefix(8).allSatisfy { $0.provider == .codex })
+        #expect(accountGrid.cards.suffix(8).allSatisfy { $0.provider == .claude })
+        #expect(CompactOverviewAccountGridView.columnCount == 2)
+        let previewGrid = Self.previewGrid(
+            codexAccount: codexAccount,
+            claudeAccount: claudeAccount,
+            codexMetrics: codexMetrics,
+            claudeMetrics: claudeMetrics,
+            dashboard: dashboard)
+        #expect(previewGrid.cards.map(\.provider) == [
+            .codex, .codex, .claude, .claude, .cursor, .grok, .antigravity,
+        ])
         let aggregateDashboard = try #require(CompactOverviewDashboard.aggregate([
             .init(provider: .codex, providerName: "Codex", dashboard: dashboard),
             .init(provider: .claude, providerName: "Claude", dashboard: claudeDashboard),
@@ -211,11 +224,9 @@ struct UsageMenuCardLayoutTests {
         #expect(aggregateDashboard.days[1].segments.map(\.value) == [12, 3])
 
         let width = CodexBarPersonalization.compactOverviewMenuWidth
-        #expect(width == 380)
+        #expect(width == 420)
         let preview = VStack(spacing: 0) {
-            CompactOverviewProviderCardView(model: codexModel, width: width)
-            Divider()
-            CompactOverviewProviderCardView(model: claudeModel, width: width)
+            CompactOverviewAccountGridView(model: previewGrid, width: width)
             Divider()
             CompactOverviewDashboardView(model: aggregateDashboard, width: width)
         }
@@ -313,6 +324,66 @@ struct UsageMenuCardLayoutTests {
             paceOnTop: paceOnTop)
     }
 
+    private static func previewGrid(
+        codexAccount: UsageMenuCardView.Model,
+        claudeAccount: UsageMenuCardView.Model,
+        codexMetrics: [UsageMenuCardView.Model.Metric],
+        claudeMetrics: [UsageMenuCardView.Model.Metric],
+        dashboard: InlineUsageDashboardModel) -> CompactOverviewAccountGridModel
+    {
+        let cursor = Self.model(
+            provider: .cursor,
+            providerName: "Cursor",
+            email: "cursor.account@gmail.com",
+            subtitleText: "Session changed during refresh",
+            subtitleStyle: .error)
+        let grokMetrics = [Self.metric(id: "secondary", title: "Weekly", percent: 100)]
+        let grok = Self.model(
+            provider: .grok,
+            providerName: "Grok",
+            email: "grok.account@gmail.com",
+            metrics: grokMetrics)
+        let antigravityMetrics = [
+            Self.metric(id: "primary", title: "Gemini", percent: 100),
+            Self.metric(id: "secondary", title: "Claude/GPT", percent: 100),
+        ]
+        let antigravity = Self.model(
+            provider: .antigravity,
+            providerName: "Antigravity",
+            email: "google.account@gmail.com",
+            metrics: antigravityMetrics)
+
+        return CompactOverviewAccountGridModel(providerModels: [
+            CompactOverviewProviderCardModel(
+                providerModel: codexAccount,
+                accountModels: (1...2).map { index in
+                    (id: "preview-codex-\(index)", model: Self.model(
+                        provider: .codex,
+                        email: index == 1 ? "primary.account@gmail.com" : "secondary.account@gmail.com",
+                        metrics: codexMetrics,
+                        dashboard: dashboard))
+                }),
+            CompactOverviewProviderCardModel(
+                providerModel: claudeAccount,
+                accountModels: (1...2).map { index in
+                    (id: "preview-claude-\(index)", model: Self.model(
+                        provider: .claude,
+                        email: index == 1 ? "main.claude@gmail.com" : "purple.claude@gmail.com",
+                        metrics: claudeMetrics,
+                        dashboard: dashboard))
+                }),
+            CompactOverviewProviderCardModel(
+                providerModel: cursor,
+                accountModels: [(id: "preview-cursor", model: cursor)]),
+            CompactOverviewProviderCardModel(
+                providerModel: grok,
+                accountModels: [(id: "preview-grok", model: grok)]),
+            CompactOverviewProviderCardModel(
+                providerModel: antigravity,
+                accountModels: [(id: "preview-antigravity", model: antigravity)]),
+        ])
+    }
+
     private static func writeSnapshotIfRequested(
         _ view: some View,
         size: CGSize) throws
@@ -341,7 +412,10 @@ struct UsageMenuCardLayoutTests {
 
     private static func model(
         provider: UsageProvider = .codex,
+        providerName: String? = nil,
         email: String = "steipete@gmail.com",
+        subtitleText: String = "Not fetched yet",
+        subtitleStyle: UsageMenuCardView.Model.SubtitleStyle = .info,
         planText: String? = "Pro 20x",
         metrics: [UsageMenuCardView.Model.Metric] = [],
         usageNotes: [String] = [],
@@ -351,10 +425,10 @@ struct UsageMenuCardLayoutTests {
     {
         UsageMenuCardView.Model(
             provider: provider,
-            providerName: provider == .claude ? "Claude" : "Codex",
+            providerName: providerName ?? (provider == .claude ? "Claude" : "Codex"),
             email: email,
-            subtitleText: "Not fetched yet",
-            subtitleStyle: .info,
+            subtitleText: subtitleText,
+            subtitleStyle: subtitleStyle,
             planText: planText,
             metrics: metrics,
             usageNotes: usageNotes,

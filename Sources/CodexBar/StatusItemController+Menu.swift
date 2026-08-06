@@ -575,6 +575,11 @@ extension StatusItemController {
         let t0 = CACurrentMediaTime()
         defer { self.logChartRenderDurationIfSlow("addOverviewRows(\(rows.count))", startedAt: t0) }
 
+        if usesCompactOverview {
+            self.addCompactOverviewContent(rows, to: menu, width: menuWidth)
+            return true
+        }
+
         for (index, row) in rows.enumerated() {
             let identifier = "\(Self.overviewRowIdentifierPrefix)\(row.provider.rawValue)"
             let storageText = self.store.storageFootprintText(for: row.provider)
@@ -596,20 +601,6 @@ extension StatusItemController {
             if index < rows.count - 1 {
                 menu.addItem(.separator())
             }
-        }
-        let dashboardInputs = rows.compactMap { row in
-            row.model.inlineUsageDashboard.map { dashboard in
-                CompactOverviewDashboard.Input(
-                    provider: row.provider,
-                    providerName: row.model.providerName,
-                    dashboard: dashboard)
-            }
-        }
-        if usesCompactOverview,
-           let dashboard = CompactOverviewDashboard.aggregate(dashboardInputs)
-        {
-            menu.addItem(.separator())
-            menu.addItem(self.makeCompactOverviewDashboardItem(dashboard, width: menuWidth))
         }
         return true
     }

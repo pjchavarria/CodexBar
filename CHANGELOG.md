@@ -42,11 +42,12 @@
 
 ### Changed
 - Personalization: make Route B the personal app's only menu, with no tabs, provider submenus, alternate layouts,
-  agent-session rows, Settings action, or account cap.
+  agent-session rows, or account cap; keep only Refresh, Settings, and Quit below the overview.
 - Packaging: add a separately signed CodexBar Personal installer that migrates settings once, preserves upstream
   CodexBar, disables upstream updates, and omits the widget/app-group entitlement from the personal bundle.
-- Personalization: compact merged overviews now place Codex and Claude accounts in two columns, keep Claude's three
-  quota bars equally compact, and split the global cost chart into labeled provider-colored stacks.
+- Personalization: the 420-point compact overview now lays every enabled provider account into two columns of
+  self-contained cards, keeps Claude's three quota bars equally compact, preserves truthful error-only cards, and
+  splits the global cost chart into labeled provider-colored stacks.
 - About: link the Website entry to codex.bar.
 
 ## 0.46.0 — 2026-07-29

@@ -205,7 +205,7 @@ final class StatusMenuClaudeSwapCompactTests: XCTestCase {
 
         let menu = controller.makeMenu()
         controller.menuWillOpen(menu)
-        XCTAssertTrue(self.representedIDs(in: menu).contains("overviewRow-claude"))
+        XCTAssertTrue(self.representedIDs(in: menu).contains("compactOverviewAccountGrid"))
 
         let (singleController, singleStore) = self.makeController(accounts: Array(accounts.prefix(1)))
         defer { singleController.releaseStatusItemsForTesting() }
@@ -224,6 +224,6 @@ final class StatusMenuClaudeSwapCompactTests: XCTestCase {
 
         let singleMenu = singleController.makeMenu()
         singleController.menuWillOpen(singleMenu)
-        XCTAssertTrue(self.representedIDs(in: singleMenu).contains("overviewRow-claude"))
+        XCTAssertTrue(self.representedIDs(in: singleMenu).contains("compactOverviewAccountGrid"))
     }
 }

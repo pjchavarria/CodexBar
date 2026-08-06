@@ -18,6 +18,12 @@ Use for live provider testing, release smoke tests, menu verification, or debugg
 - Use `$one-password` for secrets: all `op` commands inside one persistent tmux session, service account first, no raw secret output.
 - Treat browser-cookie/keychain flows as prompt-risky. Prefer CLI/API-token checks and `KeychainNoUIQuery`-safe tests unless the user explicitly requested live UI.
 - For current API behavior, browse official provider docs only.
+- Make the last check match the changed outcome. A visual artifact or interface change ends with one inspection of the
+  final rendered artifact through the same path the user will receive; a data/provider change ends with the installed
+  helper and expected account census. Do not add screenshot work to nonvisual changes merely as ceremony.
+- In T3 Code, a source path or inline-visualization token is not delivery proof. Attach the final PNG with Image View
+  and provide one `open` command when the client path has already failed. If the attachment was not actually rendered,
+  say so instead of claiming that the image appeared.
 
 ## CLI Matrix
 
@@ -111,7 +117,7 @@ sips --cropToHeightWidth 900 340 --cropOffset 20 2650 /tmp/codexbar-live-menu.pn
   --out /tmp/codexbar-live-menu-crop.png >/dev/null
 ```
 
-Verify visually with `view_image`. Confirm provider tabs/rows match enabled config and no failing provider dominates the first screen.
+Verify visually with `view_image`. Confirm provider tabs/rows match enabled config and no failing provider dominates the first screen. This is the final check for a visual change; rerun it after any subsequent UI edit.
 
 ## Browser Use
 

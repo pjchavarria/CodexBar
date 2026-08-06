@@ -241,6 +241,8 @@ struct StatusMenuPersistentRefreshTests {
 
         #expect(controller.isMergedOverviewSelected(in: menu))
         #expect(Set(controller.renderedProviders(for: menu)) == [.codex, .claude, .cursor])
+        #expect(menu.items.contains { $0.title == "Settings..." })
+        #expect(!menu.items.contains { $0.title == "About CodexBar" })
 
         let gate = ManualRefreshGate()
         controller._test_manualRefreshOperation = { await gate.wait() }

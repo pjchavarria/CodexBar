@@ -6,14 +6,13 @@ struct CompactOverviewProviderCardModel {
     struct Account: Identifiable {
         let id: String
         let identityText: String
-        let planText: String?
         let statusText: String?
+        let statusIsError: Bool
         let metrics: [UsageMenuCardView.Model.Metric]
     }
 
     let provider: UsageProvider
     let providerName: String
-    let updatedText: String
     let accounts: [Account]
     let progressColor: Color
     let heightFingerprint: String
@@ -24,14 +23,13 @@ struct CompactOverviewProviderCardModel {
     {
         self.provider = providerModel.provider
         self.providerName = providerModel.providerName
-        self.updatedText = providerModel.subtitleText
         self.accounts = accountModels.map { account in
             let metrics = Self.visibleMetrics(for: account.model)
             return Account(
                 id: account.id,
                 identityText: Self.accountIdentityText(account.model),
-                planText: account.model.planText,
                 statusText: Self.accountStatusText(account.model),
+                statusIsError: account.model.subtitleStyle == .error,
                 metrics: metrics)
         }
         self.progressColor = providerModel.progressColor
@@ -76,106 +74,130 @@ struct CompactOverviewProviderCardModel {
     }
 }
 
-struct CompactOverviewProviderCardView: View {
-    static let accountColumnCount = 2
+struct CompactOverviewAccountGridModel {
+    struct Card: Identifiable {
+        let id: String
+        let provider: UsageProvider
+        let providerName: String
+        let identityText: String
+        let statusText: String?
+        let statusIsError: Bool
+        let metrics: [UsageMenuCardView.Model.Metric]
+        let progressColor: Color
+    }
 
-    let model: CompactOverviewProviderCardModel
+    let cards: [Card]
+    let heightFingerprint: String
+
+    init(providerModels: [CompactOverviewProviderCardModel]) {
+        self.cards = providerModels.flatMap { providerModel in
+            providerModel.accounts.map { account in
+                Card(
+                    id: "\(providerModel.provider.rawValue):\(account.id)",
+                    provider: providerModel.provider,
+                    providerName: providerModel.providerName,
+                    identityText: account.identityText,
+                    statusText: account.statusText,
+                    statusIsError: account.statusIsError,
+                    metrics: account.metrics,
+                    progressColor: providerModel.progressColor)
+            }
+        }
+        self.heightFingerprint = providerModels.map { model in
+            "\(model.provider.rawValue):\(model.heightFingerprint)"
+        }.joined(separator: "|")
+    }
+}
+
+struct CompactOverviewAccountGridView: View {
+    static let columnCount = 2
+
+    let model: CompactOverviewAccountGridModel
     let width: CGFloat
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            self.providerHeader
-            Divider()
-            self.accountGrid
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+        LazyVGrid(
+            columns: Array(
+                repeating: GridItem(.flexible(minimum: 0), spacing: 8, alignment: .topLeading),
+                count: Self.columnCount),
+            alignment: .leading,
+            spacing: 8)
+        {
+            ForEach(self.model.cards) { card in
+                self.card(card)
+            }
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
         .frame(width: self.width, alignment: .leading)
     }
 
-    private var accountGrid: some View {
-        LazyVGrid(
-            columns: Array(
-                repeating: GridItem(.flexible(minimum: 0), spacing: 10, alignment: .topLeading),
-                count: Self.accountColumnCount),
-            alignment: .leading,
-            spacing: 10)
-        {
-            ForEach(self.model.accounts) { account in
-                self.account(account)
-            }
-        }
-        .overlay {
-            if self.model.accounts.count > 1 {
-                Rectangle()
-                    .fill(Color(nsColor: .separatorColor))
-                    .frame(width: 1)
-            }
-        }
-    }
+    private func card(_ card: CompactOverviewAccountGridModel.Card) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            self.cardHeader(card)
 
-    private var providerHeader: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            if let icon = ProviderBrandIcon.image(for: self.model.provider) {
-                Image(nsImage: icon)
-                    .frame(width: 16, height: 16)
-                    .accessibilityHidden(true)
-            }
-            Text(self.model.providerName)
-                .font(.headline)
+            Text(card.identityText)
+                .font(.caption)
                 .fontWeight(.semibold)
                 .foregroundStyle(MenuHighlightStyle.primary(self.isHighlighted))
                 .lineLimit(1)
-            Text(self.model.updatedText)
-                .font(.caption)
-                .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .accessibilityElement(children: .combine)
-    }
+                .truncationMode(.middle)
+                .help(card.identityText)
 
-    private func account(_ account: CompactOverviewProviderCardModel.Account) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(account.identityText)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(MenuHighlightStyle.primary(self.isHighlighted))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                if let planText = account.planText, !planText.isEmpty {
-                    Text(Self.compactPlanText(planText))
-                        .font(.caption2)
-                        .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 0)
-            }
-
-            if let statusText = account.statusText {
+            if let statusText = card.statusText {
                 Text(statusText)
                     .font(.caption)
-                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                    .foregroundStyle(card.statusIsError
+                        ? Color(nsColor: .systemRed)
+                        : MenuHighlightStyle.secondary(self.isHighlighted))
                     .lineLimit(2)
             }
 
-            ForEach(account.metrics) { metric in
-                self.metric(metric)
+            ForEach(card.metrics) { metric in
+                self.metric(metric, tint: card.progressColor)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background {
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.72))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
+        }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(account.identityText)
+        .accessibilityLabel("\(card.providerName), \(card.identityText)")
     }
 
-    private func metric(_ metric: UsageMenuCardView.Model.Metric) -> some View {
-        let tint = self.model.progressColor
-        return VStack(alignment: .leading, spacing: 3) {
+    private func cardHeader(_ card: CompactOverviewAccountGridModel.Card) -> some View {
+        HStack(alignment: .center, spacing: 7) {
+            if let icon = ProviderBrandIcon.image(for: card.provider) {
+                Image(nsImage: icon)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 15, height: 15)
+                    .foregroundStyle(MenuHighlightStyle.progressTint(
+                        self.isHighlighted,
+                        fallback: card.progressColor))
+                    .accessibilityHidden(true)
+            }
+            Text(card.providerName)
+                .font(.callout)
+                .fontWeight(.semibold)
+                .foregroundStyle(MenuHighlightStyle.primary(self.isHighlighted))
+                .lineLimit(1)
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func metric(
+        _ metric: UsageMenuCardView.Model.Metric,
+        tint: Color) -> some View
+    {
+        VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .firstTextBaseline, spacing: 3) {
                 Text(metric.title)
                     .font(.caption2)
@@ -214,10 +236,6 @@ struct CompactOverviewProviderCardView: View {
             }
         }
         .accessibilityElement(children: .combine)
-    }
-
-    private static func compactPlanText(_ planText: String) -> String {
-        planText.split(whereSeparator: { $0.isWhitespace }).last.map(String.init) ?? planText
     }
 
     private static func compactResetText(_ resetText: String) -> String {

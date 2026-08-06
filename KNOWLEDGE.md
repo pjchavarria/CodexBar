@@ -14,9 +14,9 @@
 - **Last verified:** 2026-08-04
 - **Use when:** Updating the compact multi-account overview or merging upstream menu/account changes.
 - **Knowledge:** Keep fork-only composition behind `CodexBarPersonalization` and dedicated views/extensions, but do not
-  make Route B conditional on merged-icon or provider-count settings. The 380-point menu lays every configured Codex
-  and Claude account into two columns without the upstream six-account cap, keeps ordinary email-length identities
-  readable, and keeps failed or unavailable accounts visible with truthful status. It exposes no provider tabs,
+  make Route B conditional on merged-icon or provider-count settings. The 420-point menu lays every enabled provider
+  account into two self-contained card columns without the upstream six-account cap, keeps ordinary email-length
+  identities readable, and keeps failed or unavailable accounts visible with truthful status. It exposes no provider tabs,
   provider submenus, alternate layouts, or customization
   action. The same personal-overview provider context must own account identity projection, Refresh scope, retry scope,
   and revalidation; never let hidden upstream selection flags, multi-account-only switcher thresholds, or
@@ -126,3 +126,18 @@
   `Sources/CodexBarCore/Providers/Cursor/CursorAgentStatusProbe.swift`,
   `Tests/CodexBarTests/CursorStatusProbeTests.swift`, and privacy-safe live CLI probes on 2026-08-05.
 - **Revisit when:** Cursor exposes a supported personal usage endpoint through Cursor Agent.
+
+## KB-009 · Prove the final user-visible delivery path
+- **Status:** active
+- **Last verified:** 2026-08-05
+- **Use when:** Handing off a CodexBar mock, screenshot, installed menu change, or provider-account repair.
+- **Knowledge:** Match the last QA check to the outcome that changed. Visual work ends with one inspection of the final
+  rendered artifact through the same delivery path the user receives; provider/account work ends with the installed
+  helper and expected census. In T3 Code, neither an inline-visualization token nor a filesystem path proves that the
+  user saw an image. Attach a real PNG and provide one terminal `open` command after an inline-render failure. Do not
+  require visual inspection for changes whose observable contract is entirely nonvisual.
+- **Why:** A valid source artifact can still render with the wrong appearance, broken text encoding, or no visible
+  attachment, while an unrelated screenshot adds friction without proving a data or provider fix.
+- **Evidence:** The QuotaRoom/CodexBar account-card mock first arrived as an unsupported inline token, then a Quick Look
+  render exposed light-mode and mojibake defects before the corrected dark PNG was attached on 2026-08-05.
+- **Revisit when:** T3 Code exposes a programmatic acknowledgement that a conversation image rendered successfully.

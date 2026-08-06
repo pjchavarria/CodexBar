@@ -56,21 +56,6 @@ extension StatusItemController {
     func makePersonalizedOverviewCardItem(_ context: PersonalizedOverviewCardContext) -> NSMenuItem {
         let provider = context.provider
         let model = context.model
-        if context.usesCompactOverview, provider == .codex || provider == .claude {
-            let compactModel = self.compactOverviewProviderCardModel(
-                provider: provider,
-                providerModel: model)
-            return self.makeMenuCardItem(
-                CompactOverviewProviderCardView(model: compactModel, width: context.menuWidth),
-                id: context.identifier,
-                width: context.menuWidth,
-                heightCacheScope: provider.rawValue,
-                heightCacheFingerprint: compactModel.heightFingerprint,
-                submenu: context.submenu,
-                containsInteractiveControls: false,
-                usesGPUSelection: true)
-        }
-
         let onClick: (() -> Void)? = context.usesCompactOverview
             ? nil
             : { [weak self, weak interactionMenu = context.interactionMenu] in
@@ -105,7 +90,7 @@ extension StatusItemController {
         let entries = sections.flatMap(\.entries).compactMap { entry -> MenuDescriptor.Entry? in
             guard case let .action(title, action) = entry else { return nil }
             switch action {
-            case .refresh, .about, .quit:
+            case .refresh, .settings, .quit:
                 return .action(title, action)
             default:
                 return nil
@@ -144,6 +129,47 @@ extension StatusItemController {
             submenu: nil,
             containsInteractiveControls: false,
             usesGPUSelection: true)
+    }
+
+    func makeCompactOverviewAccountGridItem(
+        _ grid: CompactOverviewAccountGridModel,
+        width: CGFloat) -> NSMenuItem
+    {
+        self.makeMenuCardItem(
+            CompactOverviewAccountGridView(model: grid, width: width),
+            id: "compactOverviewAccountGrid",
+            width: width,
+            heightCacheScope: "compact-overview-account-grid",
+            heightCacheFingerprint: grid.heightFingerprint,
+            submenu: nil,
+            containsInteractiveControls: false,
+            usesGPUSelection: true)
+    }
+
+    func addCompactOverviewContent(
+        _ rows: [(provider: UsageProvider, model: UsageMenuCardView.Model)],
+        to menu: NSMenu,
+        width: CGFloat)
+    {
+        let providerModels = rows.map { row in
+            self.compactOverviewProviderCardModel(
+                provider: row.provider,
+                providerModel: row.model)
+        }
+        let grid = CompactOverviewAccountGridModel(providerModels: providerModels)
+        menu.addItem(self.makeCompactOverviewAccountGridItem(grid, width: width))
+
+        let dashboardInputs = rows.compactMap { row in
+            row.model.inlineUsageDashboard.map { dashboard in
+                CompactOverviewDashboard.Input(
+                    provider: row.provider,
+                    providerName: row.model.providerName,
+                    dashboard: dashboard)
+            }
+        }
+        guard let dashboard = CompactOverviewDashboard.aggregate(dashboardInputs) else { return }
+        menu.addItem(.separator())
+        menu.addItem(self.makeCompactOverviewDashboardItem(dashboard, width: width))
     }
 
     func compactOverviewProviderCardModel(

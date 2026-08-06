@@ -20,15 +20,12 @@ Environment:
   CODEXBAR_CONFIG=/path/to/config.json
   CODEXBAR_QA_WEB_TIMEOUT=12
   CODEXBAR_QA_CASE_TIMEOUT=60
+  TIMEOUT_BIN=/path/to/gtimeout-or-timeout  # optional; Node fallback is built in
 USAGE
 }
 
 if [[ ! -x "$CLI" ]]; then
   echo "missing CodexBarCLI at $CLI" >&2
-  exit 2
-fi
-if [[ -z "$TIMEOUT_BIN" ]]; then
-  echo "missing timeout command (install coreutils for gtimeout)" >&2
   exit 2
 fi
 if ! command -v node >/dev/null 2>&1; then
@@ -113,6 +110,42 @@ const redact = s => String(s || "")
   .replace(/[A-Za-z0-9_-]{32,}/g, m => /[A-Za-z]/.test(m) && /[0-9]/.test(m) ? "<redacted-token>" : m);
 '
 
+run_with_timeout() {
+  if [[ -n "$TIMEOUT_BIN" ]]; then
+    "$TIMEOUT_BIN" "$CASE_TIMEOUT" "$@"
+    return $?
+  fi
+
+  node - "$CASE_TIMEOUT" "$@" <<'NODE'
+const { spawn } = require("child_process");
+const [secondsText, command, ...args] = process.argv.slice(2);
+const seconds = Number(secondsText);
+if (!command || !Number.isFinite(seconds) || seconds <= 0) {
+  process.stderr.write("invalid timeout invocation\n");
+  process.exit(2);
+}
+const child = spawn(command, args, { stdio: "inherit" });
+let timedOut = false;
+const timer = setTimeout(() => {
+  timedOut = true;
+  child.kill("SIGTERM");
+  setTimeout(() => child.kill("SIGKILL"), 1000).unref();
+}, seconds * 1000);
+timer.unref();
+child.on("error", error => {
+  clearTimeout(timer);
+  process.stderr.write(`${error.message}\n`);
+  process.exit(127);
+});
+child.on("exit", (code, signal) => {
+  clearTimeout(timer);
+  if (timedOut) process.exit(124);
+  if (signal) process.exit(128);
+  process.exit(code ?? 1);
+});
+NODE
+}
+
 run_one() {
   local name="$1"
   shift
@@ -120,7 +153,7 @@ run_one() {
   out="$(mktemp)"
   err="$(mktemp)"
   start="$(date +%s)"
-  "$TIMEOUT_BIN" "$CASE_TIMEOUT" "$CLI" usage "$@" --format json --json-only --web-timeout "$WEB_TIMEOUT" >"$out" 2>"$err"
+  run_with_timeout "$CLI" usage "$@" --format json --json-only --web-timeout "$WEB_TIMEOUT" >"$out" 2>"$err"
   st=$?
   end="$(date +%s)"
   elapsed=$((end - start))
