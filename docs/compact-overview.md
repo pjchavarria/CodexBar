@@ -62,6 +62,19 @@ that every known Codex and Claude account identity appears in its two-column pro
 a visible truthful state, and the bottom chart separates every available typed cost source without duplicating
 provider sections.
 
+## Open account-card iteration
+
+The next visual direction is proposed, not approved or implemented. Replace provider-sized sections with one consistent
+self-contained card per account in a two-column grid. Pair the two Codex cards, pair the two Claude cards, then place
+Cursor beside Grok and leave Antigravity as the final half-width card. Every card owns the same provider, identity,
+quota, reset, pacing-marker, and error grammar; providers with more quota windows simply render more meter rows. Keep
+the combined provider-colored cost/token dashboard below the grid. The current 420-point mock is intentionally wider
+than the shipped 380-point menu so representative account identities remain on one line.
+
+No live layout changes until the user marks up and approves the mock. The missing first Codex credential is a separate
+runtime defect: the current installed app has one managed credential and its live login resolves to that same identity,
+so the second Codex card cannot regain live usage without one account-scoped authentication checkpoint.
+
 ## Direction log
 
 - 2026-08-03: User approved the compact multi-account mockup but required the implementation to retain the current
@@ -81,3 +94,6 @@ provider sections.
   are login helpers only, and the live app is switched manually.
 - 2026-08-05: The user required Google, Cursor, and other enabled providers to remain visible in Route B while explicitly
   deferring reviewer routing.
+- 2026-08-05: The user opened a new account-card mock iteration: one consistent self-contained card per account in two
+  columns, with same-provider accounts adjacent and Antigravity as the final unpaired card. Implementation remains
+  paused pending visual approval.

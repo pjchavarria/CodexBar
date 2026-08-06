@@ -96,14 +96,20 @@
 - **Use when:** Testing CodexBar while the user is working in other applications.
 - **Knowledge:** Use CLI probes, parser tests, bundle/process checks, and hidden T3 preview tabs by default. Build,
   install, and relaunch completed app changes immediately with a nonactivating launch such as `open -g`; do not defer
-  those background-safe steps as a separate approval checkpoint. Do not click menu extras, activate applications, open
-  Settings, or launch foreground OAuth during unattended verification. Group only unavoidable visual interaction or
-  authentication into one explicit user-controlled checkpoint.
+  those background-safe steps as a separate approval checkpoint. After installation, verify the exact user-visible
+  provider path with the installed helper: provider/account changes require the expected account census plus truthful
+  usage or error state, and Codex multi-account work requires `--all-accounts`. A running signed process is installation
+  proof, not behavior proof. Do not click menu extras, activate applications, open Settings, or launch foreground OAuth
+  during unattended verification. Group only unavoidable visual interaction or authentication into one explicit
+  user-controlled checkpoint. Live identity diagnostics emit only fixed allowlisted counts, status, and equality facts;
+  never raw provider JSON, browser-profile registries, process command lines, or authentication payloads.
 - **Why:** macOS UI automation changes the active application and interrupts typing even when the verification itself
-  succeeds, while deferring a background-safe install forces an unnecessary extra user loop.
+  succeeds, while deferring a background-safe install forces an unnecessary extra user loop. Conversely, package-only
+  verification can install a healthy binary whose real account census is still incomplete.
 - **Evidence:** User corrections during CodexBar account recovery on 2026-08-05; background Cursor, Antigravity, and
-  Fleet checks completed without activating a window, then the personal installer was corrected to launch with
-  `open -g` and verified without changing the foreground application.
+  Fleet checks completed without activating a window. The installed personal app was later found to return one Codex
+  account because its live and managed sources resolved to the same identity; the earlier signature/process check had
+  not exercised `usage --provider codex --all-accounts`.
 - **Revisit when:** macOS exposes a reliable offscreen menu-bar automation session isolated from the user's desktop.
 
 ## KB-008 · Preserve provider visibility without fabricating usage

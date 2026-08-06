@@ -10,7 +10,9 @@ Use for live provider testing, release smoke tests, menu verification, or debugg
 ## Rules
 
 - Work from the CodexBar repo checkout.
-- Use the packaged CLI first: `CodexBar.app/Contents/Helpers/CodexBarCLI`.
+- Use `CodexBar.app/Contents/Helpers/CodexBarCLI` for pre-install development checks. For completion claims about the
+  installed personal fork, use `/Applications/CodexBar Personal.app/Contents/Helpers/CodexBarCLI` or an explicit
+  `CODEXBAR_CLI` override pointing to the installed application under test.
 - Do not use `CodexBar.app/Contents/MacOS/codexbar`; that is the app binary and may appear to hang as a CLI.
 - Never run broad `env`, `set`, or secret regex dumps.
 - Use `$one-password` for secrets: all `op` commands inside one persistent tmux session, service account first, no raw secret output.
@@ -39,6 +41,23 @@ Interpretation:
 - `--default` runs the app-facing default command with no provider override.
 - `--provider all` forces every registered provider and is expected to fail for providers without sessions/keys.
 - A green app config needs `--enabled` and `--default` clean; `--provider all` is a discovery/triage tool.
+
+## Installed-app completion gate
+
+- Bundle presence, code signature, process health, and matching binary hashes prove only that the intended build is
+  installed. They do not prove the provider behavior the user asked to change.
+- After installation, set
+  `CODEXBAR_CLI="${CODEXBAR_CLI:-/Applications/CodexBar Personal.app/Contents/Helpers/CodexBarCLI}"` and run that exact
+  helper against every provider or account path changed in the task. For Codex account work, include
+  `"$CODEXBAR_CLI" usage --provider codex --all-accounts --format json` and compare the returned account count, source,
+  usage/error state, and identity-equality relationships with the expected account census. Do not mark the app verified
+  while a required account is missing, duplicated, or represented only by packaging evidence.
+- Keep live output private: capture stdout and stderr in a task-owned mode-700 temporary directory, set captured files
+  to mode 600, and emit only a fixed allowlist of booleans, counts, source names, status enums, timestamps, and quota
+  values. Never print raw usage JSON, browser-profile registries, broad process command lines, or authentication payloads
+  while diagnosing identity.
+- When a missing credential makes the requested state impossible to prove, identify the exact absent account slot and
+  leave verification incomplete until its one user-controlled authentication checkpoint succeeds.
 
 ## Config QA
 
