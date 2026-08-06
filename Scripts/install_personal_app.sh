@@ -18,15 +18,21 @@ OPEN_BIN="${OPEN_BIN:-/usr/bin/open}"
 PGREP_BIN="${PGREP_BIN:-/usr/bin/pgrep}"
 PKILL_BIN="${PKILL_BIN:-/usr/bin/pkill}"
 SFLTOOL_BIN="${SFLTOOL_BIN:-/usr/bin/sfltool}"
+SFLTOOL_TIMEOUT_TICKS="${SFLTOOL_TIMEOUT_TICKS:-50}"
+SFLTOOL_TIMEOUT_DELAY="${SFLTOOL_TIMEOUT_DELAY:-0.1}"
+SFLTOOL_KILL_GRACE_DELAY="${SFLTOOL_KILL_GRACE_DELAY:-0.2}"
+LEGACY_UNREGISTER_DELAY="${CODEXBAR_PERSONAL_LEGACY_UNREGISTER_DELAY:-3}"
 MIN_FREE_KB="${CODEXBAR_PERSONAL_MIN_FREE_KB:-6291456}"
 UPSTREAM_APP="/Applications/CodexBar.app"
 LEGACY_PERSONAL_DOMAIN="com.pxl.codexbar.personal"
 LEGACY_PERSONAL_APP="${CODEXBAR_PERSONAL_LEGACY_APP_PATH:-/Applications/CodexBar Personal.app}"
+LEGACY_PERSONAL_ROLLBACK_ARCHIVE="${CODEXBAR_PERSONAL_LEGACY_ROLLBACK_ARCHIVE:-/Applications/CodexBar Personal.rollback.zip}"
 UPSTREAM_WAS_RUNNING=0
 PERSONAL_WAS_RUNNING=0
 INSTALLED_NEW_APP=0
 
 log() { printf '%s\n' "$*"; }
+warn() { printf 'WARNING: %s\n' "$*" >&2; }
 fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
 open_app() {
@@ -164,12 +170,40 @@ stop_installed_apps() {
   "$PKILL_BIN" -f '^/Applications/CodexBar Personal\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1 || true
 }
 
+run_bounded_sfltool_dump() {
+  local output="$1"
+  local pid attempt
+
+  "$SFLTOOL_BIN" dumpbtm >"$output" 2>/dev/null &
+  pid=$!
+  for ((attempt = 1; attempt <= SFLTOOL_TIMEOUT_TICKS; attempt++)); do
+    if ! kill -0 "$pid" >/dev/null 2>&1; then
+      wait "$pid"
+      return $?
+    fi
+    sleep "$SFLTOOL_TIMEOUT_DELAY"
+  done
+  kill -TERM "$pid" >/dev/null 2>&1 || true
+  sleep "$SFLTOOL_KILL_GRACE_DELAY"
+  if kill -0 "$pid" >/dev/null 2>&1; then
+    kill -KILL "$pid" >/dev/null 2>&1 || true
+  fi
+  wait "$pid" >/dev/null 2>&1 || true
+  return 124
+}
+
 legacy_personal_login_item_is_enabled() {
   local dump
   dump="$(mktemp "${TMPDIR:-/tmp}/codexbar-personal-login-items.XXXXXX")"
-  if ! "$SFLTOOL_BIN" dumpbtm >"$dump" 2>/dev/null || [[ ! -s "$dump" ]]; then
+  local status=0
+  run_bounded_sfltool_dump "$dump" || status=$?
+  if [[ "$status" -eq 124 ]]; then
     rm -f "$dump"
-    fail "Could not inspect the CodexBar Personal login item"
+    return 2
+  fi
+  if [[ "$status" -ne 0 || ! -s "$dump" ]]; then
+    rm -f "$dump"
+    return 3
   fi
   if awk 'BEGIN { RS = "" }
     /Bundle Identifier: com\.pxl\.codexbar\.personal/ && /Disposition: \[enabled/ { found = 1 }
@@ -184,25 +218,66 @@ legacy_personal_login_item_is_enabled() {
 
 disable_legacy_personal_login_item() {
   [[ -d "$LEGACY_PERSONAL_APP" ]] || return 0
+  validate_legacy_personal_app_path
 
   "$DEFAULTS_BIN" write "$LEGACY_PERSONAL_DOMAIN" launchAtLogin -bool false
-  if legacy_personal_login_item_is_enabled; then
-    # The legacy bundle must call SMAppService.mainApp.unregister() as itself. Launch it in the
-    # background with its persisted setting off, wait for registration to clear, then stop it.
-    open_app "$LEGACY_PERSONAL_APP"
-    local attempt
-    for attempt in 1 2 3; do
-      sleep 1
-      if ! legacy_personal_login_item_is_enabled; then
-        break
-      fi
-    done
-    "$PKILL_BIN" -f '^/Applications/CodexBar Personal\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1 || true
-  fi
-  if legacy_personal_login_item_is_enabled; then
-    fail "CodexBar Personal is still enabled at login; refusing to leave both personal apps active"
-  fi
-  log "Disabled the CodexBar Personal login item; its app remains available as a rollback."
+  # The legacy bundle must call SMAppService.mainApp.unregister() as itself. Launch it in the
+  # background with its persisted setting off, wait for that startup path, then stop it.
+  open_app "$LEGACY_PERSONAL_APP"
+  sleep "$LEGACY_UNREGISTER_DELAY"
+  "$PKILL_BIN" -f '^/Applications/CodexBar Personal\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1 || true
+
+  local inspection_status=0
+  legacy_personal_login_item_is_enabled || inspection_status=$?
+  case "$inspection_status" in
+    0)
+      archive_legacy_personal_app \
+        "CodexBar Personal remained enabled after unregister"
+      ;;
+    1)
+      log "Disabled the CodexBar Personal login item; its app remains available as a rollback."
+      ;;
+    2)
+      archive_legacy_personal_app \
+        "macOS timed out verifying the old login item"
+      ;;
+    *)
+      archive_legacy_personal_app \
+        "macOS could not verify the old login item"
+      ;;
+  esac
+}
+
+validate_legacy_personal_app_path() {
+  local parent resolved_parent
+  [[ "$LEGACY_PERSONAL_APP" == /* ]] \
+    || fail "Legacy app path must be absolute"
+  [[ "$(basename "$LEGACY_PERSONAL_APP")" == "CodexBar Personal.app" ]] \
+    || fail "Legacy app path must end in CodexBar Personal.app"
+  parent="$(dirname "$LEGACY_PERSONAL_APP")"
+  resolved_parent="$(cd "$parent" && pwd -P)" \
+    || fail "Could not resolve the legacy app parent directory"
+  [[ "$resolved_parent" != "/" ]] \
+    || fail "Refusing to operate on a legacy app directly under the filesystem root"
+  [[ -d "$LEGACY_PERSONAL_APP/Contents" ]] \
+    || fail "Legacy app path is not an application bundle"
+}
+
+archive_legacy_personal_app() {
+  local message="$1"
+  [[ ! -e "$LEGACY_PERSONAL_ROLLBACK_ARCHIVE" ]] \
+    || fail "Legacy rollback archive already exists at $LEGACY_PERSONAL_ROLLBACK_ARCHIVE"
+  ditto -c -k --sequesterRsrc --keepParent \
+    "$LEGACY_PERSONAL_APP" "$LEGACY_PERSONAL_ROLLBACK_ARCHIVE" \
+    || fail "Could not archive CodexBar Personal before disabling it"
+  [[ -s "$LEGACY_PERSONAL_ROLLBACK_ARCHIVE" ]] \
+    || fail "CodexBar Personal rollback archive is empty"
+  unzip -tq "$LEGACY_PERSONAL_ROLLBACK_ARCHIVE" >/dev/null \
+    || fail "CodexBar Personal rollback archive could not be verified"
+  rm -rf "$LEGACY_PERSONAL_APP"
+  [[ ! -e "$LEGACY_PERSONAL_APP" ]] \
+    || fail "Could not remove the launchable CodexBar Personal bundle"
+  warn "$message; the launchable legacy app was removed and its rollback is $LEGACY_PERSONAL_ROLLBACK_ARCHIVE"
 }
 
 restore_running_app_on_failure() {
