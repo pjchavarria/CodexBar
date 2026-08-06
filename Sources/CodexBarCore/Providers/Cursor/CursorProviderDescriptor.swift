@@ -39,7 +39,16 @@ public enum CursorProviderDescriptor {
             pace: ProviderPaceCapability(resetWindowPace: .windowDurationPresent),
             fetchPlan: ProviderFetchPlan(
                 sourceModes: [.auto, .cli, .web],
-                pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [CursorStatusFetchStrategy()] })),
+                pipeline: ProviderFetchPipeline(resolveStrategies: { context in
+                    switch context.sourceMode {
+                    case .auto:
+                        [CursorStatusFetchStrategy(), CursorAgentStatusFetchStrategy()]
+                    case .cli:
+                        [CursorAgentStatusFetchStrategy()]
+                    case .web, .oauth, .api:
+                        [CursorStatusFetchStrategy()]
+                    }
+                })),
             cli: ProviderCLIConfig(
                 name: "cursor",
                 versionDetector: nil))
@@ -64,8 +73,23 @@ struct CursorStatusFetchStrategy: ProviderFetchStrategy {
             sourceLabel: "web")
     }
 
-    func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
-        false
+    func shouldFallback(on error: Error, context: ProviderFetchContext) -> Bool {
+        guard context.sourceMode == .auto,
+              let cursorError = error as? CursorStatusProbeError
+        else {
+            return false
+        }
+        #if os(macOS)
+        switch cursorError {
+        case .noSessionCookie, .notLoggedIn:
+            return true
+        case .networkError, .parseFailed:
+            return false
+        }
+        #else
+        _ = cursorError
+        return false
+        #endif
     }
 
     private static func manualCookieHeader(from context: ProviderFetchContext) -> String? {

@@ -60,3 +60,26 @@
   visually ambiguous.
 - **Applies to:** Personal-app menu width and two-column account identity labels.
 - **Supersedes:** PD-003's 310-point width; its two-column layout and quota composition remain locked.
+
+## PD-007 · Separate monitored Codex accounts from the live Codex login
+- **Status:** locked
+- **Locked:** 2026-08-05
+- **Decision:** Treat the Codex app and CLI as one manually switched live login. Keep CodexBar's monitored account
+  census in its existing managed account store, independent of the currently active Codex login and independent of
+  Chrome profiles. A browser profile is only a user-controlled authentication helper, never a permanent route from an
+  account row to the Codex app.
+- **Why:** The user intentionally logs out and back in when one Codex account runs out; tying browser profiles or T3
+  provider instances to the live app corrupts that operating model and makes account rows disappear when the active
+  login changes.
+- **Applies to:** Codex account discovery, managed account authentication, active-login switching, and account labels.
+
+## PD-008 · Show enabled providers without routing work to them
+- **Status:** locked
+- **Locked:** 2026-08-05
+- **Decision:** Route B is the complete enabled-provider census, not only a Codex/Claude view. Keep an enabled provider
+  visible when usage is unavailable, show Google Antigravity usage from the authenticated `agy` CLI, and show Cursor's
+  authenticated Cursor Agent identity when its web usage session is unavailable. Do not route code review or other
+  work to Google, Cursor, or Grok until a later explicit decision.
+- **Why:** Provider disappearance was being mistaken for missing configuration, while fabricating quota from an
+  authentication-only CLI would be misleading.
+- **Applies to:** Route B provider visibility, Cursor fallback behavior, Antigravity enablement, and reviewer routing.

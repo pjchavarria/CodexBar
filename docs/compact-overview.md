@@ -29,8 +29,13 @@ fork without spreading personalization into provider code.
 - Lay every available Codex or Claude account into two equal columns within its provider section.
 - Do not cap the account grid or drop an account when usage is missing, stale, or failed; render its identity and
   truthful status while retaining the same two-column flow.
+- Keep every enabled provider in Route B even when its current fetch is error-only. Google Antigravity reads real usage
+  from the authenticated `agy` CLI. Cursor first attempts its web/app usage session, then falls back to a truthful
+  Cursor Agent connected identity without inventing quota values.
 - Clear launcher-scoped `CODEX_HOME` and `CLAUDE_CONFIG_DIR` before app initialization so T3, shell, Finder, and Login
   Item launches all discover the same account census; targeted account fetches still supply their explicit homes.
+- Keep the live Codex app login separate from CodexBar's managed account census. Both monitored accounts may be used by
+  one Codex app through manual logout/login; Chrome profiles are authentication checkpoints, not persistent app routes.
 - Show Codex Weekly only. Show Claude Session, Weekly, and Fable only as equally compact peer bars in Claude's provider
   color, preserving the existing red pacing and threshold markers.
 - Do not render usage dashboards inside account or provider sections. Render one combined cost/token KPI and chart
@@ -53,8 +58,9 @@ layout proof plus the repository test/check commands, then inspect the synthetic
 ## Next checkpoint
 
 Keep the installed personal app current by merging `upstream/main`, rerunning the personal installer, and confirming
-that every known Codex and Claude account identity appears in its two-column provider grid and that the bottom chart
-separates every available typed cost source without duplicating provider sections.
+that every known Codex and Claude account identity appears in its two-column provider grid, every enabled provider has
+a visible truthful state, and the bottom chart separates every available typed cost source without duplicating
+provider sections.
 
 ## Direction log
 
@@ -71,3 +77,7 @@ separates every available typed cost source without duplicating provider section
   including accounts whose usage cannot be fetched.
 - 2026-08-04: The live two-column menu proved 310 points too narrow for ordinary email-length identities, and the first
   360-point correction still clipped a Claude identity beside `-swap`; Route B now uses 380 points.
+- 2026-08-05: The user separated the one live Codex app login from CodexBar's monitored account census; browser profiles
+  are login helpers only, and the live app is switched manually.
+- 2026-08-05: The user required Google, Cursor, and other enabled providers to remain visible in Route B while explicitly
+  deferring reviewer routing.

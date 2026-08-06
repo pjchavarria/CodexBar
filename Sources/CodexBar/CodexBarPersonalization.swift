@@ -83,6 +83,16 @@ enum CodexBarPersonalization {
         featureEnabled && providerSupportsCompactAccounts
     }
 
+    /// Route B is the complete provider census, so an enabled provider remains visible when its
+    /// current usage fetch fails. The upstream overview may still omit error-only providers.
+    nonisolated static func includesOverviewProvider(
+        isErrorOnly: Bool,
+        usesCompactOverview: Bool,
+        hasKnownAccounts: Bool) -> Bool
+    {
+        !isErrorOnly || usesCompactOverview || hasKnownAccounts
+    }
+
     static func showsEveryAccount(
         for provider: UsageProvider,
         settings: SettingsStore,

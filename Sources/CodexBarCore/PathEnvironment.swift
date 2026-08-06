@@ -141,6 +141,31 @@ public enum BinaryLocator {
             home: home)
     }
 
+    public static func resolveCursorAgentBinary(
+        env: [String: String] = ProcessInfo.processInfo.environment,
+        loginPATH: [String]? = LoginShellPathCache.shared.current,
+        commandV: (String, String?, TimeInterval, FileManager) -> String? = ShellCommandLocator.commandV,
+        aliasResolver: (String, String?, TimeInterval, FileManager, String) -> String? = ShellCommandLocator
+            .resolveAlias,
+        fileManager: FileManager = .default,
+        home: String = NSHomeDirectory()) -> String?
+    {
+        self.resolveBinary(
+            name: "cursor-agent",
+            overrideKey: "CURSOR_AGENT_PATH",
+            env: env,
+            loginPATH: loginPATH,
+            commandV: commandV,
+            aliasResolver: aliasResolver,
+            wellKnownPaths: [
+                "\(home)/.local/bin/cursor-agent",
+                "/opt/homebrew/bin/cursor-agent",
+                "/usr/local/bin/cursor-agent",
+            ],
+            fileManager: fileManager,
+            home: home)
+    }
+
     public static func resolveCodexBinary(
         env: [String: String] = ProcessInfo.processInfo.environment,
         loginPATH: [String]? = LoginShellPathCache.shared.current,

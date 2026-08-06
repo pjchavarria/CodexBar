@@ -561,13 +561,13 @@ extension StatusItemController {
         // interaction closures must always reference the live menu they end up serving.
         let interactionMenu = captureMenu ?? menu
         let usesCompactOverview = self.usesCompactOverview(enabledProviders: enabledProviders)
-        let overviewProviders = self.personalizedOverviewProviders(enabledProviders)
-        let rows: [(provider: UsageProvider, model: UsageMenuCardView.Model)] = overviewProviders
-            .compactMap { provider in
+        let rows = self.personalizedOverviewProviders(enabledProviders)
+            .compactMap { provider -> (provider: UsageProvider, model: UsageMenuCardView.Model)? in
                 guard let model = self.menuCardModel(for: provider) else { return nil }
-                guard !model.isOverviewErrorOnly ||
-                    usesCompactOverview && self.hasKnownCompactOverviewAccounts(for: provider)
-                else { return nil }
+                guard CodexBarPersonalization.includesOverviewProvider(
+                    isErrorOnly: model.isOverviewErrorOnly,
+                    usesCompactOverview: usesCompactOverview,
+                    hasKnownAccounts: self.hasKnownCompactOverviewAccounts(for: provider)) else { return nil }
                 return (provider: provider, model: model)
             }
         guard !rows.isEmpty else { return false }

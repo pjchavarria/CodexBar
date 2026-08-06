@@ -5,6 +5,56 @@ import Testing
 
 @Suite(.serialized)
 struct CursorStatusProbeTests {
+    @Test
+    func `parses authenticated Cursor Agent identity`() throws {
+        let data = Data("""
+        {
+            "isAuthenticated": true,
+            "userInfo": {
+                "email": "reviewer@example.com",
+                "userId": "cursor-user"
+            }
+        }
+        """.utf8)
+
+        let status = try JSONDecoder().decode(CursorAgentStatusResponse.self, from: data)
+
+        #expect(status.isAuthenticated)
+        #expect(status.userInfo?.email == "reviewer@example.com")
+        #expect(status.userInfo?.userId == "cursor-user")
+    }
+
+    @Test
+    func `parses numeric Cursor Agent user identifier`() throws {
+        let data = Data("""
+        {
+            "isAuthenticated": true,
+            "userInfo": {
+                "userId": 12345
+            }
+        }
+        """.utf8)
+
+        let status = try JSONDecoder().decode(CursorAgentStatusResponse.self, from: data)
+
+        #expect(status.userInfo?.userId == "12345")
+    }
+
+    @Test
+    func `web auth failure may fall back to authenticated Cursor Agent`() {
+        let strategy = CursorStatusFetchStrategy()
+
+        #expect(strategy.shouldFallback(
+            on: CursorStatusProbeError.noSessionCookie,
+            context: makeCursorFetchContext(sourceMode: .auto)))
+        #expect(!strategy.shouldFallback(
+            on: CursorStatusProbeError.noSessionCookie,
+            context: makeCursorFetchContext(sourceMode: .web)))
+        #expect(!strategy.shouldFallback(
+            on: CursorStatusProbeError.networkError("offline"),
+            context: makeCursorFetchContext(sourceMode: .auto)))
+    }
+
     // MARK: - Usage Summary Parsing
 
     @Test
@@ -1399,6 +1449,36 @@ private struct CursorAppAuthSessionProviderStub: CursorAppAuthSessionProviding {
     func loadSession() throws -> CursorAppAuthSession? {
         self.session
     }
+}
+
+private struct CursorFetchContextClaudeStub: ClaudeUsageFetching {
+    func loadLatestUsage(model _: String) async throws -> ClaudeUsageSnapshot {
+        throw ClaudeUsageError.parseFailed("stub")
+    }
+
+    func debugRawProbe(model _: String) async -> String {
+        "stub"
+    }
+
+    func detectVersion() -> String? {
+        nil
+    }
+}
+
+private func makeCursorFetchContext(sourceMode: ProviderSourceMode) -> ProviderFetchContext {
+    let environment = ["HOME": FileManager.default.temporaryDirectory.path]
+    return ProviderFetchContext(
+        runtime: .cli,
+        sourceMode: sourceMode,
+        includeCredits: false,
+        webTimeout: 1,
+        webDebugDumpHTML: false,
+        verbose: false,
+        env: environment,
+        settings: nil,
+        fetcher: UsageFetcher(environment: environment),
+        claudeFetcher: CursorFetchContextClaudeStub(),
+        browserDetection: BrowserDetection(cacheTTL: 0))
 }
 
 final class CursorStatusProbeStubURLProtocol: URLProtocol {

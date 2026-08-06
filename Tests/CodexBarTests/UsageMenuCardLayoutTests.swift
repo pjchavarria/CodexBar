@@ -283,6 +283,14 @@ struct UsageMenuCardLayoutTests {
             enabledProviderCount: 2,
             providerSupportsCompactAccounts: false,
             usesStackedLayout: true))
+        #expect(CodexBarPersonalization.includesOverviewProvider(
+            isErrorOnly: true,
+            usesCompactOverview: true,
+            hasKnownAccounts: false))
+        #expect(!CodexBarPersonalization.includesOverviewProvider(
+            isErrorOnly: true,
+            usesCompactOverview: false,
+            hasKnownAccounts: false))
     }
 
     private static func metric(
