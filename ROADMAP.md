@@ -2,8 +2,10 @@
 
 ## Active
 
-- [Mac App Store release readiness](docs/app-store-release.md) — prove a sandboxed QuotaRoom build can preserve every
-  enabled provider before creating the first production submission.
+- [Standalone app and Mac App Store release](docs/app-store-release.md) — choose the final name, scaffold the new
+  repository, and prove the approved five-provider grid in a sandboxed build before the first production submission.
+- [Reviewer provider evaluation](docs/reviewer-accounts.md) — score Codex 2, Claude 2, Cursor, Grok, and Antigravity on a
+  frozen three-task corpus before promoting any new production route or changing Luna Medium to Luna Max.
 
 ## Shipped (2026-08-04)
 
@@ -12,6 +14,4 @@
 
 ## Later
 
-- [Reviewer provider accounts](docs/reviewer-accounts.md) — Cursor, Grok, and Google Antigravity are connected without
-  routing; resume only after reviewer roles have an explicit evaluation plan.
 - Revisit the menu-bar visualization only after the compact overview is running with real account data.

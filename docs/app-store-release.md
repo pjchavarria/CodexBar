@@ -1,25 +1,27 @@
-_Status: open proposal · 2026-08-06_
+_Status: building · 2026-08-06_
 
-# QuotaRoom Mac App Store Release
+# Standalone App and Mac App Store Release
 
 ## Resume here
 
-Build a separate sandboxed QuotaRoom distribution target and prove the complete five-provider account grid with test
-credentials before creating a production App Store submission. Keep the installed direct bundle working as the
-behavioral baseline while the sandbox path is incomplete.
+Choose the final product name, create a new repository and sandboxed native app, then land one vertical slice: menu-bar
+shell, fixture-backed account cards, and the provider-colored aggregate chart. Keep the installed fork running only as
+the behavior oracle while the replacement is incomplete.
 
 ## Locked outcome
 
-- The Mac App Store is QuotaRoom's intended public release channel.
-- The sellable product remains the 420-point, two-column complete-provider account room described by
-  [PD-009 and PD-011](product-decisions.md).
+- The Mac App Store is the standalone app's intended public release channel.
+- The sellable product remains the 420-point, two-column complete-provider account grid described by
+  [PD-009 and PD-012](product-decisions.md).
 - App Store work may replace provider acquisition mechanisms, but it does not silently remove Codex, Claude, Cursor,
   Grok, Antigravity, configured accounts, truthful errors, or the provider-colored aggregate chart.
 - Distributed copies retain the upstream MIT license and copyright notice.
+- The new repository does not import upstream application architecture. Reuse is admitted file by file only after its
+  dependency closure, license notice, and product need are explicit.
 
 ## Confirmed release gate
 
-The current QuotaRoom application is not App Store ready. Its application entitlement file does not enable
+The current fork application is not App Store ready. Its application entitlement file does not enable
 `com.apple.security.app-sandbox`, and the installed bundle has no sandbox entitlement. The provider layer also reads
 browser cookie/local-storage databases, local account homes, and installed command-line tools. Apple's Mac App Store
 rules require an appropriately sandboxed, self-contained app packaged with Apple tooling.
@@ -27,26 +29,53 @@ rules require an appropriately sandboxed, self-contained app packaged with Apple
 This is an acquisition-boundary problem, not a listing-form problem. Creating the App Store Connect record first would
 not prove that the submitted binary can still populate the product.
 
-## Compatibility spike
+## Standalone architecture boundary
 
-1. Add a separate App Store packaging configuration with an App Store bundle identifier, App Sandbox, outbound network
-   access, and no direct-distribution-only updater or login-item assumptions.
-2. Inventory each shipped provider path and classify every required input as one of:
+The repository audit counted 419 Swift app files, 714 Swift test files, 65 immediate provider directories excluding
+`Shared`, and an active `Sources/CodexBar/Sync` subsystem. The replacement therefore starts in a new repository instead
+of adding a thin target here.
+
+### May migrate after dependency review
+
+- The approved account-card and aggregate-chart composition, rewritten against a small replacement domain model.
+- Pure provider response models, parsers, reset calculations, and fixtures that compile without ambient settings,
+  browser, process, updater, sync, or menu-controller dependencies.
+- Provider colors, accessibility labels, and formatting rules that are part of the approved visible behavior.
+- The upstream MIT copyright and permission notice with every copied substantial portion.
+
+### Must not migrate
+
+- Sparkle, widgets, iCloud/app-group sync, Claude Sync, hooks, agent-session UI, telemetry, status pages, provider tabs,
+  provider submenus, alternate layouts, or the upstream settings/controller graph.
+- Browser-cookie scraping, external CLI execution, unrestricted home-directory discovery, or direct-distribution helper
+  assumptions as the App Store acquisition architecture.
+- Providers outside Codex, Claude, Cursor, Grok, and Antigravity until the five-provider release promise is complete.
+
+## Build sequence
+
+1. After the final name is chosen, scaffold a new Swift 6/macOS 15+ repository with App Sandbox, outbound network access,
+   a menu-bar shell, a minimal settings window, and a login item that does not activate other applications.
+2. Implement the approved account-card grid and aggregate chart against deterministic fixtures; this becomes the visual
+   and accessibility contract before live credentials are added.
+3. Define one small provider adapter protocol around typed account identity, quota rows, errors, and chart contributions.
+4. Inventory each provider path and classify every required input as one of:
    - network API or provider-supported OAuth inside the sandbox;
    - user-selected folder retained with a security-scoped bookmark;
    - helper code embedded and signed inside the application bundle;
    - incompatible current mechanism that needs a provider-specific redesign.
-3. Prove one sandboxed fixture account per provider, then the real complete account census, without temporary exception
+5. Add Antigravity first as the current in-process OAuth proof, then Codex, Claude, Cursor, and Grok only when each has a
+   supported acquisition path. Prove one sandboxed fixture account per provider, then the real complete account census,
+   without temporary exception
    entitlements. A temporary exception is a documented last resort, not the product architecture.
-4. Run the same installed-helper matrix and final Route B render used by the direct bundle. Any missing account or chart
+6. Run the same provider matrix and final account-card render used by the current fork. Any missing account or chart
    series fails the spike visibly.
-5. Only after the provider matrix is green, create the App Store Connect app record and TestFlight build.
+7. Only after the provider matrix is green, create the App Store Connect app record and TestFlight build.
 
 ### Provider acquisition matrix
 
 | Provider | Current working input | App Store path to prove | Status |
 | --- | --- | --- | --- |
-| Codex | Managed OAuth/web credentials, browser-session import or external Codex CLI fallback; ambient `~/.codex` session logs for the global chart | Keep managed credentials inside QuotaRoom; use the in-process authenticated HTTP path; let the user select each local history folder and retain a security-scoped bookmark | Prototype required |
+| Codex | Managed OAuth/web credentials, browser-session import or external Codex CLI fallback; ambient `~/.codex` session logs for the global chart | Keep managed credentials inside the app; use the in-process authenticated HTTP path; let the user select each local history folder and retain a security-scoped bookmark | Prototype required |
 | Claude | External `claude-swap` account list plus Claude config homes, CLI, OAuth, or browser web session | Replace `claude-swap` execution with an in-app account store and a reviewable in-process fetch path; verify that the chosen consumer-account API/auth mechanism is provider-supported | Provider/API decision required |
 | Cursor | Browser cookie database or external `cursor-agent`, followed by Cursor web usage and cost endpoints | Obtain a provider-supported in-app authorization and usage mechanism; browser-database scraping and an external agent are not the release architecture | Provider/API blocker |
 | Grok | Browser cookie import and a local Grok RPC/web-billing path | Obtain a provider-supported in-app authorization and subscription-usage mechanism; keep API-key billing separate from consumer quota | Provider/API blocker |
@@ -57,7 +86,7 @@ the repository does not yet contain evidence of a supported replacement; it does
 
 ## Storefront and review work after the spike
 
-- Reserve the QuotaRoom name and final bundle identifier in Certificates, Identifiers & Profiles and App Store Connect.
+- Reserve the chosen name and final bundle identifier in Certificates, Identifiers & Profiles and App Store Connect.
 - Choose pricing and territories; complete the paid-app agreement, tax, and banking setup before sale.
 - Publish a support URL and privacy policy under a provider-neutral business identity.
 - Prepare a 1024-point App Store icon, fictional-account screenshots, description, subtitle, keywords, category, age
@@ -90,3 +119,8 @@ the repository does not yet contain evidence of a supported replacement; it does
   product surface.
 - 2026-08-06: Repository and installed-bundle inspection showed the current direct build is unsandboxed and depends on
   cross-container provider data, so the sandbox compatibility spike precedes storefront submission.
+- 2026-08-06: The user rejected QuotaRoom, ended the upstream-fork product strategy, and locked a new minimal standalone
+  app that preserves the approved grid, chart, and complete five-provider promise.
+- 2026-08-06: A repository inventory and adversarial architecture pass upheld a new-repository boundary. The existing
+  fork remains only a temporary behavior/code oracle; a compiled thin-target dependency proof is the sole evidence that
+  would reopen that boundary.

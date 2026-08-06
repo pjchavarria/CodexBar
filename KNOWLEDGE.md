@@ -168,16 +168,30 @@
 ## KB-011 · Retire the predecessor login item during a bundle rename
 - **Status:** active
 - **Last verified:** 2026-08-06
-- **Use when:** Replacing an installed menu-bar app with a new bundle identifier while preserving the old bundle for
-  rollback.
+- **Use when:** Replacing an installed menu-bar app with a new bundle identifier without leaving a second launchable.
 - **Knowledge:** Copying the old `launchAtLogin` preference to the new settings domain enables the new
   `SMAppService.mainApp` registration but does not unregister the old bundle's independent registration. Stop both
   apps, persist `launchAtLogin=false` in the old domain, launch the old bundle in the background so it unregisters
-  itself, verify the background-task record is disabled, then launch the replacement. The old bundle may remain as a
-  stopped manual rollback.
+  itself, verify the background-task record when macOS responds, then remove the obsolete bundle. A replacement install
+  may keep the prior app only inside a validated hidden transaction directory; restore it on failure and delete the
+  transaction after the replacement stays running. Do not retain `.previous.app` bundles or rollback ZIPs.
 - **Why:** Both CodexBar Personal and QuotaRoom were enabled login items after the rename, so the next login could
   resurrect two personal apps even though only QuotaRoom was currently running.
 - **Evidence:** `Scripts/install_personal_app.sh`, `Scripts/test_personal_app_installer.sh`, and the 2026-08-06
   `sfltool dumpbtm` audit showing CodexBar Personal disabled and QuotaRoom enabled.
-- **Revisit when:** The legacy personal bundle is permanently removed or Apple provides a supported API for one bundle
-  to unregister another bundle's main-app login item.
+- **Revisit when:** Apple provides a supported API for one bundle to unregister another bundle's main-app login item.
+
+## KB-012 · Use the fork as an oracle, not the replacement architecture
+- **Status:** active
+- **Last verified:** 2026-08-06
+- **Use when:** Migrating the approved account-card product into its standalone application.
+- **Knowledge:** Start the replacement in a new repository and admit reused files only after their dependency closure is
+  small, pure, licensed, and necessary. Preserve visible behavior and typed provider semantics, not the upstream app
+  graph. Keep the installed fork available only while it provides parity evidence; do not merge new upstream features.
+- **Why:** The current app target contains 419 Swift files, 65 immediate provider directories, and Sync. The five desired
+  provider folders still depend on broad settings, OAuth/session, projection, browser, and process machinery, so an
+  in-repo thin target would preserve the coupling the rewrite is meant to remove.
+- **Evidence:** `docs/app-store-release.md`, `docs/product-decisions.md`, the 2026-08-06 deterministic source inventory,
+  and the architecture adversary that upheld a new repository unless a compiled dependency-closure spike proves the
+  provider core is already separable.
+- **Revisit when:** A compiled thin-target spike satisfies that falsifier or the five-provider product promise changes.

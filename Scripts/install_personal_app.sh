@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Package and install the personalized fork alongside upstream CodexBar.
+# Package and install the current personalized app alongside upstream CodexBar.
 
 set -euo pipefail
 
@@ -26,10 +26,9 @@ MIN_FREE_KB="${CODEXBAR_PERSONAL_MIN_FREE_KB:-6291456}"
 UPSTREAM_APP="/Applications/CodexBar.app"
 LEGACY_PERSONAL_DOMAIN="com.pxl.codexbar.personal"
 LEGACY_PERSONAL_APP="${CODEXBAR_PERSONAL_LEGACY_APP_PATH:-/Applications/CodexBar Personal.app}"
-LEGACY_PERSONAL_ROLLBACK_ARCHIVE="${CODEXBAR_PERSONAL_LEGACY_ROLLBACK_ARCHIVE:-/Applications/CodexBar Personal.rollback.zip}"
 UPSTREAM_WAS_RUNNING=0
 PERSONAL_WAS_RUNNING=0
-INSTALLED_NEW_APP=0
+INSTALL_TRANSACTION_DIR=""
 
 log() { printf '%s\n' "$*"; }
 warn() { printf 'WARNING: %s\n' "$*" >&2; }
@@ -231,21 +230,19 @@ disable_legacy_personal_login_item() {
   legacy_personal_login_item_is_enabled || inspection_status=$?
   case "$inspection_status" in
     0)
-      archive_legacy_personal_app \
-        "CodexBar Personal remained enabled after unregister"
+      warn "CodexBar Personal remained enabled after unregister; removing the obsolete app so it cannot relaunch"
       ;;
     1)
-      log "Disabled the CodexBar Personal login item; its app remains available as a rollback."
+      log "Disabled the CodexBar Personal login item."
       ;;
     2)
-      archive_legacy_personal_app \
-        "macOS timed out verifying the old login item"
+      warn "macOS timed out verifying the old login item; removing the obsolete app so it cannot relaunch"
       ;;
     *)
-      archive_legacy_personal_app \
-        "macOS could not verify the old login item"
+      warn "macOS could not verify the old login item; removing the obsolete app so it cannot relaunch"
       ;;
   esac
+  remove_legacy_personal_app
 }
 
 validate_legacy_personal_app_path() {
@@ -263,38 +260,107 @@ validate_legacy_personal_app_path() {
     || fail "Legacy app path is not an application bundle"
 }
 
-archive_legacy_personal_app() {
-  local message="$1"
-  [[ ! -e "$LEGACY_PERSONAL_ROLLBACK_ARCHIVE" ]] \
-    || fail "Legacy rollback archive already exists at $LEGACY_PERSONAL_ROLLBACK_ARCHIVE"
-  ditto -c -k --sequesterRsrc --keepParent \
-    "$LEGACY_PERSONAL_APP" "$LEGACY_PERSONAL_ROLLBACK_ARCHIVE" \
-    || fail "Could not archive CodexBar Personal before disabling it"
-  [[ -s "$LEGACY_PERSONAL_ROLLBACK_ARCHIVE" ]] \
-    || fail "CodexBar Personal rollback archive is empty"
-  unzip -tq "$LEGACY_PERSONAL_ROLLBACK_ARCHIVE" >/dev/null \
-    || fail "CodexBar Personal rollback archive could not be verified"
+remove_legacy_personal_app() {
+  validate_legacy_personal_app_path
   rm -rf "$LEGACY_PERSONAL_APP"
   [[ ! -e "$LEGACY_PERSONAL_APP" ]] \
-    || fail "Could not remove the launchable CodexBar Personal bundle"
-  warn "$message; the launchable legacy app was removed and its rollback is $LEGACY_PERSONAL_ROLLBACK_ARCHIVE"
+    || fail "Could not remove the obsolete CodexBar Personal bundle"
+  log "Removed the obsolete CodexBar Personal app."
+}
+
+validate_install_transaction_dir() {
+  local transaction_dir="$1"
+  local target_dir target_stem resolved_target_dir resolved_transaction_parent
+  [[ -n "$transaction_dir" && "$transaction_dir" == /* ]] \
+    || fail "Install transaction directory must be absolute"
+  target_stem="${APP_BUNDLE_NAME%.app}"
+  [[ "$(basename "$transaction_dir")" == ".$target_stem.install."* ]] \
+    || fail "Unexpected install transaction directory"
+  target_dir="$(dirname "$TARGET_APP")"
+  resolved_target_dir="$(cd "$target_dir" && pwd -P)" \
+    || fail "Could not resolve the install target directory"
+  resolved_transaction_parent="$(cd "$(dirname "$transaction_dir")" && pwd -P)" \
+    || fail "Could not resolve the install transaction parent"
+  [[ "$resolved_transaction_parent" == "$resolved_target_dir" ]] \
+    || fail "Install transaction escaped the target directory"
+}
+
+discard_install_transaction() {
+  [[ -n "$INSTALL_TRANSACTION_DIR" ]] || return 0
+  validate_install_transaction_dir "$INSTALL_TRANSACTION_DIR"
+  rm -rf "$INSTALL_TRANSACTION_DIR"
+  [[ ! -e "$INSTALL_TRANSACTION_DIR" ]] \
+    || fail "Could not remove the replaced app transaction"
+  INSTALL_TRANSACTION_DIR=""
+}
+
+remove_obsolete_install_artifacts() {
+  local target_dir target_stem resolved_target_dir artifact transaction
+  local -a transactions=()
+  target_dir="$(dirname "$TARGET_APP")"
+  target_stem="${APP_BUNDLE_NAME%.app}"
+  [[ "$(basename "$TARGET_APP")" == "$APP_BUNDLE_NAME" ]] \
+    || fail "Install target must end in $APP_BUNDLE_NAME"
+  mkdir -p "$target_dir"
+  resolved_target_dir="$(cd "$target_dir" && pwd -P)" \
+    || fail "Could not resolve the install target directory"
+  [[ "$resolved_target_dir" != "/" ]] \
+    || fail "Refusing to clean install artifacts at the filesystem root"
+
+  for artifact in \
+    "$target_dir/$target_stem.previous.app" \
+    "$target_dir/.$target_stem.installing.app"
+  do
+    [[ ! -e "$artifact" ]] || rm -rf "$artifact"
+  done
+  while IFS= read -r -d '' artifact; do
+    [[ "$(dirname "$artifact")" == "$target_dir" ]] \
+      || fail "Obsolete install artifact escaped the target directory"
+    [[ "$(basename "$artifact")" == "$target_stem.failed-"*.app ]] \
+      || fail "Unexpected failed install artifact"
+    rm -rf "$artifact"
+  done < <(find "$target_dir" -mindepth 1 -maxdepth 1 -name "$target_stem.failed-*.app" -print0)
+
+  while IFS= read -r -d '' transaction; do
+    validate_install_transaction_dir "$transaction"
+    transactions+=("$transaction")
+  done < <(find "$target_dir" -mindepth 1 -maxdepth 1 -type d -name ".$target_stem.install.*" -print0)
+  if [[ ! -e "$TARGET_APP" ]]; then
+    local -a restorable=()
+    for transaction in "${transactions[@]}"; do
+      [[ ! -e "$transaction/previous.app" ]] || restorable+=("$transaction/previous.app")
+    done
+    [[ "${#restorable[@]}" -le 1 ]] \
+      || fail "Multiple interrupted installs contain a previous app; refusing to guess"
+    if [[ "${#restorable[@]}" -eq 1 ]]; then
+      mv "${restorable[0]}" "$TARGET_APP" \
+        || fail "Could not restore the app from an interrupted install"
+    fi
+  fi
+  for transaction in "${transactions[@]}"; do
+    rm -rf "$transaction"
+  done
 }
 
 restore_running_app_on_failure() {
   local status="$?"
   trap - EXIT
   if [[ "$status" -ne 0 ]]; then
-    local previous="${TARGET_APP%.app}.previous.app"
-    if [[ "$INSTALLED_NEW_APP" == "1" && -e "$TARGET_APP" ]]; then
-      mv "$TARGET_APP" "${TARGET_APP%.app}.failed-$$.app" || true
-    fi
-    if [[ "$INSTALLED_NEW_APP" == "1" && -e "$previous" && ! -e "$TARGET_APP" ]]; then
-      mv "$previous" "$TARGET_APP" || true
+    if [[ -n "$INSTALL_TRANSACTION_DIR" && -d "$INSTALL_TRANSACTION_DIR" ]]; then
+      local previous="$INSTALL_TRANSACTION_DIR/previous.app"
+      local failed="$INSTALL_TRANSACTION_DIR/failed.app"
+      if [[ -e "$TARGET_APP" ]]; then
+        mv "$TARGET_APP" "$failed" || true
+      fi
+      if [[ -e "$previous" && ! -e "$TARGET_APP" ]]; then
+        mv "$previous" "$TARGET_APP" || true
+      fi
+      validate_install_transaction_dir "$INSTALL_TRANSACTION_DIR"
+      rm -rf "$INSTALL_TRANSACTION_DIR" || true
+      INSTALL_TRANSACTION_DIR=""
     fi
     if [[ "$PERSONAL_WAS_RUNNING" == "1" && -e "$TARGET_APP" ]]; then
       open_app "$TARGET_APP" || true
-    elif [[ "$PERSONAL_WAS_RUNNING" == "1" && -e "$LEGACY_PERSONAL_APP" ]]; then
-      open_app "$LEGACY_PERSONAL_APP" || true
     elif [[ "$UPSTREAM_WAS_RUNNING" == "1" && -e "$UPSTREAM_APP" ]]; then
       open_app "$UPSTREAM_APP" || true
     fi
@@ -304,26 +370,21 @@ restore_running_app_on_failure() {
 
 install_packaged_app() {
   local packaged="$1"
-  local target_dir staged previous
+  local target_dir target_stem staged previous
   target_dir="$(dirname "$TARGET_APP")"
-  staged="$target_dir/.QuotaRoom.installing.app"
-  previous="${TARGET_APP%.app}.previous.app"
+  target_stem="${APP_BUNDLE_NAME%.app}"
 
   [[ -d "$packaged" ]] || fail "Missing packaged app at $packaged"
   [[ "$(basename "$TARGET_APP")" == "$APP_BUNDLE_NAME" ]] \
     || fail "Install target must end in $APP_BUNDLE_NAME"
   mkdir -p "$target_dir"
-  rm -rf "$staged"
+  INSTALL_TRANSACTION_DIR="$(mktemp -d "$target_dir/.$target_stem.install.XXXXXX")"
+  validate_install_transaction_dir "$INSTALL_TRANSACTION_DIR"
+  staged="$INSTALL_TRANSACTION_DIR/staged.app"
+  previous="$INSTALL_TRANSACTION_DIR/previous.app"
   ditto "$packaged" "$staged"
   codesign --verify --deep --strict --verbose=2 "$staged"
 
-  if [[ -e "$previous" ]]; then
-    if command -v trash >/dev/null 2>&1; then
-      trash "$previous"
-    else
-      fail "A previous backup already exists at $previous; move it before updating"
-    fi
-  fi
   if [[ -e "$TARGET_APP" ]]; then
     mv "$TARGET_APP" "$previous"
   fi
@@ -331,7 +392,6 @@ install_packaged_app() {
     [[ -e "$previous" && ! -e "$TARGET_APP" ]] && mv "$previous" "$TARGET_APP"
     fail "Could not install the personal app; the previous app was restored"
   fi
-  INSTALLED_NEW_APP=1
 }
 
 launch_and_verify() {
@@ -368,6 +428,7 @@ main() {
   fi
 
   check_disk_headroom
+  remove_obsolete_install_artifacts
 
   local team_id="${CODEXBAR_PERSONAL_TEAM_ID:-}"
   local identity="${APP_IDENTITY:-}"
@@ -404,7 +465,10 @@ main() {
   install_packaged_app "$packaged"
   disable_legacy_personal_login_item
   launch_and_verify
+  discard_install_transaction
   trap - EXIT
 }
 
-main "$@"
+if [[ "${CODEXBAR_PERSONAL_SOURCE_ONLY:-0}" != "1" ]]; then
+  main "$@"
+fi

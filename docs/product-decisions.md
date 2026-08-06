@@ -1,12 +1,14 @@
 # Product Decisions
 
 ## PD-001 · Build on CodexBar upstream
-- **Status:** locked
+- **Status:** superseded
 - **Locked:** 2026-08-03
 - **Decision:** Use the open-source CodexBar repository as the product base, retain the canonical project as an upstream
   Git remote, and isolate personalization behind narrow fork-owned seams.
 - **Why:** The fork should inherit provider, authentication, and maintenance work without recreating CodexBar.
 - **Applies to:** Repository structure, upstream merges, provider behavior, and fork-owned implementation boundaries.
+- **Superseded by:** PD-012 replaces upstream merges with a standalone minimal application; the fork remains a temporary
+  behavior and code-reference oracle only.
 
 ## PD-002 · Make the merged menu a compact overview
 - **Status:** superseded
@@ -80,7 +82,7 @@
 - **Applies to:** Codex account discovery, managed account authentication, active-login switching, and account labels.
 
 ## PD-008 · Show enabled providers without routing work to them
-- **Status:** locked
+- **Status:** superseded
 - **Locked:** 2026-08-05
 - **Decision:** Route B is the complete enabled-provider census, not only a Codex/Claude view. Keep an enabled provider
   visible when usage is unavailable, show Google Antigravity usage from the authenticated `agy` CLI, and show Cursor's
@@ -89,6 +91,8 @@
 - **Why:** Provider disappearance was being mistaken for missing configuration, while fabricating quota from an
   authentication-only CLI would be misleading.
 - **Applies to:** Route B provider visibility, Cursor fallback behavior, Antigravity enablement, and reviewer routing.
+- **Superseded by:** PD-013 keeps provider visibility and authorizes a measured routing evaluation without promoting any
+  new provider by default.
 
 ## PD-009 · Make every account a self-contained card
 - **Status:** locked
@@ -106,7 +110,7 @@
 - **Supersedes:** PD-003's provider-section grid, PD-005's About action, and PD-006's 380-point width.
 
 ## PD-010 · Give the sellable fork an independent identity
-- **Status:** locked
+- **Status:** superseded
 - **Locked:** 2026-08-05
 - **Decision:** Ship the personal fork as QuotaRoom at `/Applications/QuotaRoom.app`, using bundle identifier
   `com.pxl.quotaroom` and the approved full-color open-frame quota icon for the application, Dock, and future storefront.
@@ -117,9 +121,11 @@
   terminal-command identity.
 - **Applies to:** Public naming, application icon, bundle/display name, packaging, release artifacts, storefront, and
   license notices. A public domain and storefront listing remain separate future decisions.
+- **Superseded by:** PD-012 replaces the fork with a standalone app, PD-014 removes rollback launchables, and PD-015
+  records that QuotaRoom is rejected while the final name remains open.
 
 ## PD-011 · Prepare QuotaRoom for the Mac App Store without hiding providers
-- **Status:** locked
+- **Status:** superseded
 - **Locked:** 2026-08-06
 - **Decision:** Make the Mac App Store QuotaRoom's intended public release channel. Keep the current notarizable direct
   bundle as the working baseline while building and validating a separate sandboxed distribution path. The App Store
@@ -129,3 +135,52 @@
   command-line tools, while the Mac App Store requires an appropriately sandboxed, self-contained application.
 - **Applies to:** Distribution architecture, entitlements, provider acquisition, App Store Connect metadata, privacy
   disclosure, review evidence, and TestFlight release gates.
+- **Superseded by:** PD-012 keeps the complete-provider App Store promise but makes sandboxing a first-class property of
+  the new standalone app rather than a second target inside the fork.
+
+## PD-012 · Replace the fork with a minimal standalone app
+- **Status:** locked
+- **Locked:** 2026-08-06
+- **Decision:** Build a new native macOS application in a new repository. Preserve only the approved 420-point,
+  two-column account-card menu, provider-specific quota rows, truthful unavailable states, typed provider-colored
+  aggregate chart, background refresh, account authentication/settings, and login item for Codex, Claude, Cursor,
+  Grok, and Antigravity. The current fork remains a read-only behavior and implementation oracle until the replacement
+  reaches complete-provider parity; it is not the product base and receives no further upstream feature merges.
+- **Why:** The current app target contains 419 Swift files, 65 provider directories, and a Sync subsystem, while the
+  approved product is one menu surface over five providers. A new repository makes excluded systems a structural
+  boundary instead of a convention inside a coupled upstream tree.
+- **Applies to:** Repository ownership, migration sequencing, source reuse, provider adapters, testing, packaging, and
+  App Store release architecture.
+
+## PD-013 · Evaluate additional agent providers before routing
+- **Status:** locked
+- **Locked:** 2026-08-06
+- **Decision:** Evaluate Cursor, Grok, and Google Antigravity against the existing Codex 2 and Claude 2 routes using a
+  frozen, scored corpus covering bounded extraction, defect review, and small implementation. Do not promote a provider
+  from connection status or one benchmark. Keep mechanical Luna work on Codex 2 at medium reasoning until a separate
+  Luna Medium-versus-Max evaluation proves a better route; keep architecture, coding, safety, review judgment, and
+  final acceptance on Sol.
+- **Why:** The first equal-prompt probe produced alternative findings from Codex and Cursor, turn-limit exhaustion from
+  Claude and Grok, and a headless permission denial from Antigravity. That tests orchestration readiness but does not
+  establish quality parity.
+- **Applies to:** T3 provider routing, reviewer automation, model selection, evaluation evidence, and failure behavior.
+
+## PD-014 · Keep only the latest installed app
+- **Status:** locked
+- **Locked:** 2026-08-06
+- **Decision:** Do not retain stopped predecessor apps, `.previous.app` bundles, or rollback ZIP archives. During an
+  install, keep the prior bundle only inside a hidden transaction directory long enough to restore an interrupted
+  replacement; delete that transaction after the new app launches successfully. Git history and reproducible builds
+  are the rollback mechanism after installation.
+- **Why:** Persistent rollback launchables add login-item and identity ambiguity without protecting source or release
+  history.
+- **Applies to:** Local installation, bundle replacement, predecessor cleanup, packaging tests, and handoff language.
+
+## PD-015 · Retire the QuotaRoom name
+- **Status:** locked
+- **Locked:** 2026-08-06
+- **Decision:** Do not release the standalone product as QuotaRoom. Keep the approved icon and menu-bar visualization
+  direction provisional until the final name is chosen; do not reserve a bundle identifier, App Store record, or domain
+  under a brainstorm candidate.
+- **Why:** The user rejected the assembled “quota + room” mechanism metaphor before storefront work began.
+- **Applies to:** Product naming, bundle identity, repository naming, domains, storefront metadata, and public assets.
