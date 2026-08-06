@@ -192,7 +192,7 @@ kill_all_codexbar() {
     sleep 0.2
   done
 
-  # Phase 2: force kill any stragglers (avoids `open -n` creating multiple instances).
+  # Phase 2: force kill any stragglers (avoids `open -g -n` creating multiple instances).
   pkill -9 -f "${APP_PROCESS_PATTERN}" 2>/dev/null || true
   pkill -9 -f "${DEBUG_PROCESS_PATTERN}" 2>/dev/null || true
   pkill -9 -f "${RELEASE_PROCESS_PATTERN}" 2>/dev/null || true
@@ -283,7 +283,7 @@ fi
 
 # 4) Launch the packaged app.
 log "==> launch app"
-if ! open "${APP_BUNDLE}"; then
+if ! open -g "${APP_BUNDLE}"; then
   log "WARN: launch app returned non-zero; falling back to direct binary launch."
   "${APP_BUNDLE}/Contents/MacOS/CodexBar" >/dev/null 2>&1 &
   disown

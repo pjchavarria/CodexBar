@@ -52,7 +52,7 @@ swiftlint --strict
 
 # Restart app after rebuild
 pkill -x CodexBar || pkill -f CodexBar.app || true
-cd /Users/steipete/Projects/codexbar && open -n /Users/steipete/Projects/codexbar/CodexBar.app
+cd /Users/steipete/Projects/codexbar && open -g -n /Users/steipete/Projects/codexbar/CodexBar.app
 ```
 
 ### Release

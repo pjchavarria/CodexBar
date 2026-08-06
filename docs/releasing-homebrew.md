@@ -45,7 +45,7 @@ brew uninstall --cask codexbar || true
 brew untap steipete/tap || true
 brew tap steipete/tap
 brew install --cask steipete/tap/codexbar
-open -a CodexBar
+open -g -a CodexBar
 ```
 
 ## 4) Push tap changes

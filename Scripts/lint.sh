@@ -37,6 +37,10 @@ check_personal_app_installer() {
   "${ROOT_DIR}/Scripts/test_personal_app_installer.sh"
 }
 
+check_background_launch_policy() {
+  "${ROOT_DIR}/Scripts/test_background_launch_policy.sh"
+}
+
 check_release_dsym_paths() {
   "${ROOT_DIR}/Scripts/test_release_dsym_paths.sh"
 }
@@ -94,6 +98,7 @@ run_portable_checks() {
   check_package_signing
   check_package_info_plist
   check_personal_app_installer
+  check_background_launch_policy
   check_release_dsym_paths
   check_sparkle_signing_paths
   check_swift_test_sharding

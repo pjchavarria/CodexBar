@@ -135,7 +135,7 @@ CodexBar restart:
 ```bash
 pkill -x CodexBar || pkill -f CodexBar.app || true
 cd "$(git rev-parse --show-toplevel)"
-open -n CodexBar.app
+open -g -n CodexBar.app
 /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' CodexBar.app/Contents/Info.plist
 /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' CodexBar.app/Contents/Info.plist
 ```

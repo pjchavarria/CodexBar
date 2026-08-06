@@ -30,7 +30,7 @@ ditto -x -k "$TMP_DIR/prev.zip" "$TMP_DIR"
 ditto "$TMP_DIR/${APP_NAME}.app" /Applications/${APP_NAME}.app
 
 echo "Launching previous build…"
-open -n /Applications/${APP_NAME}.app
+open -g -n /Applications/${APP_NAME}.app
 sleep 4
 
 cat <<'MSG'

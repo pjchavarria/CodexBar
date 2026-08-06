@@ -19,7 +19,7 @@ if [[ ! -d "$APP_PATH" ]]; then
 fi
 
 echo "==> Launching CodexBar from $APP_PATH"
-open -n "$APP_PATH"
+open -g -n "$APP_PATH"
 
 # Wait a moment and check if it's running
 sleep 1
@@ -29,4 +29,3 @@ else
     echo "ERROR: App exited immediately. Check crash logs in Console.app (User Reports)."
     exit 1
 fi
-

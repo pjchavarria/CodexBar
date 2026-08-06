@@ -69,11 +69,17 @@ chmod 600 "$HOME/.codexbar"/config.pre-qa-*.json
 
 ## Live Menu QA
 
-Use Peekaboo after CLI checks:
+Install and relaunch in the background after CLI checks. Do not make installation a separate approval checkpoint:
 
 ```bash
 pkill -x CodexBar || pkill -f 'CodexBar.app/Contents/MacOS/CodexBar' || true
-open -n "$PWD/CodexBar.app"
+open -g -n "$PWD/CodexBar.app"
+pgrep -f "$PWD/CodexBar.app/Contents/MacOS/CodexBar"
+```
+
+Only when the user explicitly starts a visible verification checkpoint, use Peekaboo to open the menu:
+
+```bash
 peekaboo menu list-all --json | rg -i 'codexbar'
 peekaboo menu click-extra --title codexbar-merged --json
 screencapture -x /tmp/codexbar-live-menu.png

@@ -94,13 +94,16 @@
 - **Status:** active
 - **Last verified:** 2026-08-05
 - **Use when:** Testing CodexBar while the user is working in other applications.
-- **Knowledge:** Use CLI probes, parser tests, bundle/process checks, and hidden T3 preview tabs by default. Do not click
-  menu extras, activate applications, open Settings, or launch foreground OAuth during unattended verification. Group
-  all unavoidable visual or authentication work into one explicit user-controlled checkpoint.
+- **Knowledge:** Use CLI probes, parser tests, bundle/process checks, and hidden T3 preview tabs by default. Build,
+  install, and relaunch completed app changes immediately with a nonactivating launch such as `open -g`; do not defer
+  those background-safe steps as a separate approval checkpoint. Do not click menu extras, activate applications, open
+  Settings, or launch foreground OAuth during unattended verification. Group only unavoidable visual interaction or
+  authentication into one explicit user-controlled checkpoint.
 - **Why:** macOS UI automation changes the active application and interrupts typing even when the verification itself
-  succeeds.
-- **Evidence:** User-caught focus interruption during CodexBar account recovery on 2026-08-05; background Cursor,
-  Antigravity, and Fleet checks then completed without activating a window.
+  succeeds, while deferring a background-safe install forces an unnecessary extra user loop.
+- **Evidence:** User corrections during CodexBar account recovery on 2026-08-05; background Cursor, Antigravity, and
+  Fleet checks completed without activating a window, then the personal installer was corrected to launch with
+  `open -g` and verified without changing the foreground application.
 - **Revisit when:** macOS exposes a reliable offscreen menu-bar automation session isolated from the user's desktop.
 
 ## KB-008 · Preserve provider visibility without fabricating usage

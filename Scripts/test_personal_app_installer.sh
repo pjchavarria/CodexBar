@@ -57,10 +57,10 @@ then
 fi
 [[ "$(defaults read "$TARGET_DOMAIN" unrecognizedValue)" == "1" ]]
 
-if ! rg -q 'env -u CODEX_HOME -u CLAUDE_CONFIG_DIR open -n' \
+if ! rg -q 'env -u CODEX_HOME -u CLAUDE_CONFIG_DIR open -g -n' \
   "$ROOT/Scripts/install_personal_app.sh"
 then
-  echo "Personal app launcher does not clear account-scoped environments" >&2
+  echo "Personal app launcher does not clear account-scoped environments and preserve focus" >&2
   exit 1
 fi
 

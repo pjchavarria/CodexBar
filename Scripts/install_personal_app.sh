@@ -25,7 +25,8 @@ fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 open_app() {
   # A launcher such as T3 can scope this shell to one provider account. The menu app must
   # discover the user's ambient and managed accounts instead of inheriting that launcher identity.
-  env -u CODEX_HOME -u CLAUDE_CONFIG_DIR open -n "$1"
+  # `-g` lets installs and relaunches finish without stealing focus from the user's current app.
+  env -u CODEX_HOME -u CLAUDE_CONFIG_DIR open -g -n "$1"
 }
 
 load_local_environment() {
