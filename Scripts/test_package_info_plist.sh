@@ -23,6 +23,7 @@ BUNDLE_ID=com.steipete.codexbar.test
 DISPLAY_NAME="CodexBar Test"
 MARKETING_VERSION=0.0.0
 BUILD_NUMBER=0
+CACHE_SERVICE=com.steipete.codexbar.test.cache
 FEED_URL=https://example.invalid/appcast.xml
 AUTO_CHECKS=false
 BUILD_TIMESTAMP=2026-01-01T00:00:00Z
@@ -42,6 +43,7 @@ plist = plistlib.loads(Path(sys.argv[1]).read_bytes())
 assert plist["CFBundleName"] == "CodexBar Test"
 assert plist["CFBundleDisplayName"] == "CodexBar Test"
 assert plist["CFBundleIdentifier"] == "com.steipete.codexbar.test"
+assert plist["CodexBarCacheService"] == "com.steipete.codexbar.test.cache"
 assert plist["SUFeedURL"] == "https://example.invalid/appcast.xml"
 assert plist["SUEnableAutomaticChecks"] is False
 declarations = plist.get("UTExportedTypeDeclarations")

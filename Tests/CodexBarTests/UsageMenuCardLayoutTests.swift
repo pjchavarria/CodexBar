@@ -195,6 +195,7 @@ struct UsageMenuCardLayoutTests {
         #expect(claudeModel.accounts.last?.metrics.isEmpty == true)
         let accountGrid = CompactOverviewAccountGridModel(providerModels: [codexModel, claudeModel])
         #expect(accountGrid.cards.count == 16)
+        #expect(accountGrid.rows.count == 8 && accountGrid.rows.allSatisfy { $0.cards.count == 2 })
         #expect(accountGrid.cards.prefix(8).allSatisfy { $0.provider == .codex })
         #expect(accountGrid.cards.suffix(8).allSatisfy { $0.provider == .claude })
         #expect(CompactOverviewAccountGridView.columnCount == 2)
@@ -206,6 +207,12 @@ struct UsageMenuCardLayoutTests {
             dashboard: dashboard)
         #expect(previewGrid.cards.map(\.provider) == [
             .codex, .codex, .claude, .claude, .cursor, .grok, .antigravity,
+        ])
+        #expect(previewGrid.rows.map { $0.cards.map(\.provider) } == [
+            [.codex, .codex],
+            [.claude, .claude],
+            [.cursor, .grok],
+            [.antigravity],
         ])
         let aggregateDashboard = try #require(CompactOverviewDashboard.aggregate([
             .init(provider: .codex, providerName: "Codex", dashboard: dashboard),

@@ -5,16 +5,23 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${CODEXBAR_PERSONAL_ENV_FILE:-$ROOT/.codexbar-personal.env}"
-SOURCE_DOMAIN="${CODEXBAR_PERSONAL_SOURCE_DOMAIN:-com.steipete.codexbar}"
-BUNDLE_ID="${CODEXBAR_PERSONAL_BUNDLE_ID:-com.pxl.codexbar.personal}"
-DISPLAY_NAME="${CODEXBAR_PERSONAL_DISPLAY_NAME:-CodexBar Personal}"
-TARGET_APP="${CODEXBAR_PERSONAL_INSTALL_PATH:-/Applications/CodexBar Personal.app}"
+SOURCE_DOMAIN="${CODEXBAR_PERSONAL_SOURCE_DOMAIN:-}"
+BUNDLE_ID="${CODEXBAR_PERSONAL_BUNDLE_ID:-com.pxl.quotaroom}"
+DISPLAY_NAME="${CODEXBAR_PERSONAL_DISPLAY_NAME:-QuotaRoom}"
+APP_BUNDLE_NAME="${CODEXBAR_PERSONAL_APP_BUNDLE_NAME:-QuotaRoom.app}"
+TARGET_APP="${CODEXBAR_PERSONAL_INSTALL_PATH:-/Applications/QuotaRoom.app}"
 MIGRATION_KEY="CodexBarPersonalSettingsMigrationVersion"
 MIGRATION_VERSION=1
 DEFAULTS_BIN="${DEFAULTS_BIN:-/usr/bin/defaults}"
 PLUTIL_BIN="${PLUTIL_BIN:-/usr/bin/plutil}"
+OPEN_BIN="${OPEN_BIN:-/usr/bin/open}"
+PGREP_BIN="${PGREP_BIN:-/usr/bin/pgrep}"
+PKILL_BIN="${PKILL_BIN:-/usr/bin/pkill}"
+SFLTOOL_BIN="${SFLTOOL_BIN:-/usr/bin/sfltool}"
 MIN_FREE_KB="${CODEXBAR_PERSONAL_MIN_FREE_KB:-6291456}"
 UPSTREAM_APP="/Applications/CodexBar.app"
+LEGACY_PERSONAL_DOMAIN="com.pxl.codexbar.personal"
+LEGACY_PERSONAL_APP="${CODEXBAR_PERSONAL_LEGACY_APP_PATH:-/Applications/CodexBar Personal.app}"
 UPSTREAM_WAS_RUNNING=0
 PERSONAL_WAS_RUNNING=0
 INSTALLED_NEW_APP=0
@@ -26,7 +33,7 @@ open_app() {
   # A launcher such as T3 can scope this shell to one provider account. The menu app must
   # discover the user's ambient and managed accounts instead of inheriting that launcher identity.
   # `-g` lets installs and relaunches finish without stealing focus from the user's current app.
-  env -u CODEX_HOME -u CLAUDE_CONFIG_DIR open -g -n "$1"
+  env -u CODEX_HOME -u CLAUDE_CONFIG_DIR "$OPEN_BIN" -g -n "$1"
 }
 
 load_local_environment() {
@@ -70,7 +77,18 @@ check_disk_headroom() {
   [[ "$available_kb" =~ ^[0-9]+$ ]] || fail "Could not determine free disk space"
   [[ "$MIN_FREE_KB" =~ ^[0-9]+$ ]] || fail "CODEXBAR_PERSONAL_MIN_FREE_KB must be an integer"
   if [[ "$available_kb" -lt "$MIN_FREE_KB" ]]; then
-    fail "CodexBar Personal requires 6 GiB free before a release build; only $((available_kb / 1024)) MiB is available"
+    fail "QuotaRoom requires 6 GiB free before a release build; only $((available_kb / 1024)) MiB is available"
+  fi
+}
+
+resolve_source_domain() {
+  if [[ -n "$SOURCE_DOMAIN" ]]; then
+    return 0
+  fi
+  if "$DEFAULTS_BIN" read "$LEGACY_PERSONAL_DOMAIN" >/dev/null 2>&1; then
+    SOURCE_DOMAIN="$LEGACY_PERSONAL_DOMAIN"
+  else
+    SOURCE_DOMAIN=com.steipete.codexbar
   fi
 }
 
@@ -92,6 +110,7 @@ remove_nonportable_defaults() {
 
 migrate_settings_once() (
   local existing source_plist migrated_plist verify_plist
+  resolve_source_domain
   existing="$(mktemp "${TMPDIR:-/tmp}/codexbar-personal-existing.XXXXXX")"
   source_plist="$(mktemp "${TMPDIR:-/tmp}/codexbar-personal-source.XXXXXX")"
   migrated_plist="$(mktemp "${TMPDIR:-/tmp}/codexbar-personal-migrated.XXXXXX")"
@@ -115,6 +134,7 @@ migrate_settings_once() (
 
   cp "$source_plist" "$migrated_plist"
   remove_nonportable_defaults "$migrated_plist"
+  "$PLUTIL_BIN" -remove "$MIGRATION_KEY" "$migrated_plist" >/dev/null 2>&1 || true
   "$PLUTIL_BIN" -insert "$MIGRATION_KEY" -integer "$MIGRATION_VERSION" "$migrated_plist"
 
   if ! "$DEFAULTS_BIN" import "$BUNDLE_ID" "$migrated_plist" >/dev/null 2>&1; then
@@ -131,29 +151,75 @@ migrate_settings_once() (
 )
 
 stop_installed_apps() {
-  if pgrep -f '^/Applications/CodexBar\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1; then
+  if "$PGREP_BIN" -f '^/Applications/CodexBar\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1; then
     UPSTREAM_WAS_RUNNING=1
   fi
-  if pgrep -f '^/Applications/CodexBar Personal\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1; then
+  if "$PGREP_BIN" -f '^/Applications/QuotaRoom\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1 \
+    || "$PGREP_BIN" -f '^/Applications/CodexBar Personal\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1
+  then
     PERSONAL_WAS_RUNNING=1
   fi
-  pkill -f '^/Applications/CodexBar\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1 || true
-  pkill -f '^/Applications/CodexBar Personal\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1 || true
+  "$PKILL_BIN" -f '^/Applications/CodexBar\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1 || true
+  "$PKILL_BIN" -f '^/Applications/QuotaRoom\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1 || true
+  "$PKILL_BIN" -f '^/Applications/CodexBar Personal\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1 || true
+}
+
+legacy_personal_login_item_is_enabled() {
+  local dump
+  dump="$(mktemp "${TMPDIR:-/tmp}/codexbar-personal-login-items.XXXXXX")"
+  if ! "$SFLTOOL_BIN" dumpbtm >"$dump" 2>/dev/null || [[ ! -s "$dump" ]]; then
+    rm -f "$dump"
+    fail "Could not inspect the CodexBar Personal login item"
+  fi
+  if awk 'BEGIN { RS = "" }
+    /Bundle Identifier: com\.pxl\.codexbar\.personal/ && /Disposition: \[enabled/ { found = 1 }
+    END { exit found ? 0 : 1 }' "$dump"
+  then
+    rm -f "$dump"
+    return 0
+  fi
+  rm -f "$dump"
+  return 1
+}
+
+disable_legacy_personal_login_item() {
+  [[ -d "$LEGACY_PERSONAL_APP" ]] || return 0
+
+  "$DEFAULTS_BIN" write "$LEGACY_PERSONAL_DOMAIN" launchAtLogin -bool false
+  if legacy_personal_login_item_is_enabled; then
+    # The legacy bundle must call SMAppService.mainApp.unregister() as itself. Launch it in the
+    # background with its persisted setting off, wait for registration to clear, then stop it.
+    open_app "$LEGACY_PERSONAL_APP"
+    local attempt
+    for attempt in 1 2 3; do
+      sleep 1
+      if ! legacy_personal_login_item_is_enabled; then
+        break
+      fi
+    done
+    "$PKILL_BIN" -f '^/Applications/CodexBar Personal\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1 || true
+  fi
+  if legacy_personal_login_item_is_enabled; then
+    fail "CodexBar Personal is still enabled at login; refusing to leave both personal apps active"
+  fi
+  log "Disabled the CodexBar Personal login item; its app remains available as a rollback."
 }
 
 restore_running_app_on_failure() {
   local status="$?"
   trap - EXIT
   if [[ "$status" -ne 0 ]]; then
-    local previous="$(dirname "$TARGET_APP")/CodexBar Personal.previous.app"
+    local previous="${TARGET_APP%.app}.previous.app"
     if [[ "$INSTALLED_NEW_APP" == "1" && -e "$TARGET_APP" ]]; then
-      mv "$TARGET_APP" "$(dirname "$TARGET_APP")/CodexBar Personal.failed-$$.app" || true
+      mv "$TARGET_APP" "${TARGET_APP%.app}.failed-$$.app" || true
     fi
     if [[ "$INSTALLED_NEW_APP" == "1" && -e "$previous" && ! -e "$TARGET_APP" ]]; then
       mv "$previous" "$TARGET_APP" || true
     fi
     if [[ "$PERSONAL_WAS_RUNNING" == "1" && -e "$TARGET_APP" ]]; then
       open_app "$TARGET_APP" || true
+    elif [[ "$PERSONAL_WAS_RUNNING" == "1" && -e "$LEGACY_PERSONAL_APP" ]]; then
+      open_app "$LEGACY_PERSONAL_APP" || true
     elif [[ "$UPSTREAM_WAS_RUNNING" == "1" && -e "$UPSTREAM_APP" ]]; then
       open_app "$UPSTREAM_APP" || true
     fi
@@ -165,12 +231,12 @@ install_packaged_app() {
   local packaged="$1"
   local target_dir staged previous
   target_dir="$(dirname "$TARGET_APP")"
-  staged="$target_dir/.CodexBar Personal.installing.app"
-  previous="$target_dir/CodexBar Personal.previous.app"
+  staged="$target_dir/.QuotaRoom.installing.app"
+  previous="${TARGET_APP%.app}.previous.app"
 
   [[ -d "$packaged" ]] || fail "Missing packaged app at $packaged"
-  [[ "$TARGET_APP" == */"CodexBar Personal.app" ]] \
-    || fail "Install target must end in CodexBar Personal.app"
+  [[ "$(basename "$TARGET_APP")" == "$APP_BUNDLE_NAME" ]] \
+    || fail "Install target must end in $APP_BUNDLE_NAME"
   mkdir -p "$target_dir"
   rm -rf "$staged"
   ditto "$packaged" "$staged"
@@ -198,13 +264,13 @@ launch_and_verify() {
   local expected="$TARGET_APP/Contents/MacOS/CodexBar"
   local attempt
   for attempt in 1 2 3 4 5 6 7 8 9 10; do
-    if pgrep -f "^${expected}$" >/dev/null 2>&1; then
-      log "CodexBar Personal is running."
+    if "$PGREP_BIN" -f "^${expected}$" >/dev/null 2>&1; then
+      log "QuotaRoom is running."
       return 0
     fi
     sleep 1
   done
-  fail "CodexBar Personal did not stay running"
+  fail "QuotaRoom did not stay running"
 }
 
 main() {
@@ -215,6 +281,14 @@ main() {
   fi
   if [[ "${1:-}" == "--check-headroom-only" ]]; then
     check_disk_headroom
+    return 0
+  fi
+  if [[ "${1:-}" == "--disable-legacy-login-only" ]]; then
+    stop_installed_apps
+    disable_legacy_personal_login_item
+    if [[ "$PERSONAL_WAS_RUNNING" == "1" && -d "$TARGET_APP" ]]; then
+      open_app "$TARGET_APP"
+    fi
     return 0
   fi
 
@@ -238,7 +312,7 @@ main() {
     APP_TEAM_ID="$team_id" \
     CODEXBAR_SIGNING=identity \
     CODEXBAR_BUILD_ROOT="$build_root" \
-    CODEXBAR_APP_BUNDLE_NAME="CodexBar Personal.app" \
+    CODEXBAR_APP_BUNDLE_NAME="$APP_BUNDLE_NAME" \
     CODEXBAR_BUNDLE_ID="$BUNDLE_ID" \
     CODEXBAR_DISPLAY_NAME="$DISPLAY_NAME" \
     CODEXBAR_FEED_URL="" \
@@ -247,12 +321,13 @@ main() {
     CODEXBAR_INCLUDE_APP_GROUP=0 \
     "$ROOT/Scripts/package_app.sh" release
 
-  local packaged="$ROOT/CodexBar Personal.app"
+  local packaged="$ROOT/$APP_BUNDLE_NAME"
   [[ "$(defaults read "$packaged/Contents/Info.plist" CFBundleIdentifier)" == "$BUNDLE_ID" ]] \
     || fail "Packaged bundle identifier does not match the personal app"
   [[ "$(defaults read "$packaged/Contents/Info.plist" SUEnableAutomaticChecks)" == "0" ]] \
     || fail "Personal app update checks are not disabled"
   install_packaged_app "$packaged"
+  disable_legacy_personal_login_item
   launch_and_verify
   trap - EXIT
 }

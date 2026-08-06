@@ -75,6 +75,13 @@ struct CompactOverviewProviderCardModel {
 }
 
 struct CompactOverviewAccountGridModel {
+    static let columnCount = 2
+
+    struct Row: Identifiable {
+        let id: String
+        let cards: [Card]
+    }
+
     struct Card: Identifiable {
         let id: String
         let provider: UsageProvider
@@ -87,10 +94,11 @@ struct CompactOverviewAccountGridModel {
     }
 
     let cards: [Card]
+    let rows: [Row]
     let heightFingerprint: String
 
     init(providerModels: [CompactOverviewProviderCardModel]) {
-        self.cards = providerModels.flatMap { providerModel in
+        let cards = providerModels.flatMap { providerModel in
             providerModel.accounts.map { account in
                 Card(
                     id: "\(providerModel.provider.rawValue):\(account.id)",
@@ -103,6 +111,14 @@ struct CompactOverviewAccountGridModel {
                     progressColor: providerModel.progressColor)
             }
         }
+        self.cards = cards
+        self.rows = stride(from: 0, to: cards.count, by: Self.columnCount).map { start in
+            let end = min(start + Self.columnCount, cards.count)
+            let rowCards = Array(cards[start..<end])
+            return Row(
+                id: rowCards.map(\.id).joined(separator: "|"),
+                cards: rowCards)
+        }
         self.heightFingerprint = providerModels.map { model in
             "\(model.provider.rawValue):\(model.heightFingerprint)"
         }.joined(separator: "|")
@@ -110,19 +126,19 @@ struct CompactOverviewAccountGridModel {
 }
 
 struct CompactOverviewAccountGridView: View {
-    static let columnCount = 2
+    nonisolated static var columnCount: Int {
+        CompactOverviewAccountGridModel.columnCount
+    }
 
     let model: CompactOverviewAccountGridModel
     let width: CGFloat
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
     var body: some View {
-        LazyVGrid(
-            columns: Array(
-                repeating: GridItem(.flexible(minimum: 0), spacing: 8, alignment: .topLeading),
-                count: Self.columnCount),
-            alignment: .leading,
-            spacing: 8)
+        CompactOverviewPairedGridLayout(
+            columnCount: Self.columnCount,
+            horizontalSpacing: 8,
+            verticalSpacing: 8)
         {
             ForEach(self.model.cards) { card in
                 self.card(card)
@@ -159,7 +175,7 @@ struct CompactOverviewAccountGridView: View {
             }
         }
         .padding(10)
-        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(Color(nsColor: .controlBackgroundColor).opacity(0.72))
@@ -242,5 +258,70 @@ struct CompactOverviewAccountGridView: View {
         let parts = resetText.split(whereSeparator: { $0.isWhitespace })
         guard parts.count > 2 else { return resetText }
         return parts.suffix(2).joined(separator: " ")
+    }
+}
+
+private struct CompactOverviewPairedGridLayout: Layout {
+    let columnCount: Int
+    let horizontalSpacing: CGFloat
+    let verticalSpacing: CGFloat
+
+    func sizeThatFits(
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache _: inout Void) -> CGSize
+    {
+        let width = self.resolvedWidth(proposal: proposal, subviews: subviews)
+        let rowHeights = self.rowHeights(width: width, subviews: subviews)
+        let verticalSpacing = CGFloat(max(0, rowHeights.count - 1)) * self.verticalSpacing
+        return CGSize(
+            width: width,
+            height: rowHeights.reduce(0, +) + verticalSpacing)
+    }
+
+    func placeSubviews(
+        in bounds: CGRect,
+        proposal _: ProposedViewSize,
+        subviews: Subviews,
+        cache _: inout Void)
+    {
+        let rowHeights = self.rowHeights(width: bounds.width, subviews: subviews)
+        let columnWidth = self.columnWidth(for: bounds.width)
+        var y = bounds.minY
+        for (index, subview) in subviews.enumerated() {
+            let row = index / self.columnCount
+            let column = index % self.columnCount
+            guard row < rowHeights.count else { continue }
+            let x = bounds.minX + CGFloat(column) * (columnWidth + self.horizontalSpacing)
+            subview.place(
+                at: CGPoint(x: x, y: y),
+                anchor: .topLeading,
+                proposal: ProposedViewSize(width: columnWidth, height: rowHeights[row]))
+            if column == self.columnCount - 1 || index == subviews.count - 1 {
+                y += rowHeights[row] + self.verticalSpacing
+            }
+        }
+    }
+
+    private func resolvedWidth(proposal: ProposedViewSize, subviews: Subviews) -> CGFloat {
+        if let width = proposal.width { return width }
+        let widest = subviews.map { $0.sizeThatFits(.unspecified).width }.max() ?? 0
+        return widest * CGFloat(self.columnCount) +
+            CGFloat(max(0, self.columnCount - 1)) * self.horizontalSpacing
+    }
+
+    private func columnWidth(for width: CGFloat) -> CGFloat {
+        let spacing = CGFloat(max(0, self.columnCount - 1)) * self.horizontalSpacing
+        return max(0, (width - spacing) / CGFloat(max(1, self.columnCount)))
+    }
+
+    private func rowHeights(width: CGFloat, subviews: Subviews) -> [CGFloat] {
+        let columnWidth = self.columnWidth(for: width)
+        return stride(from: 0, to: subviews.count, by: self.columnCount).map { start in
+            let end = min(start + self.columnCount, subviews.count)
+            return subviews[start..<end].map {
+                $0.sizeThatFits(ProposedViewSize(width: columnWidth, height: nil)).height
+            }.max() ?? 0
+        }
     }
 }

@@ -50,11 +50,16 @@ struct CodexLocalSessionCostSettingsTests {
         defer { fixture.settings._test_activeManagedCodexRemoteHomePath = nil }
 
         let managedScope = fixture.store.tokenCostScope(for: .codex)
+        CodexBarPersonalization.compactOverviewEnabledOverrideForTesting = true
+        let compactOverviewScope = fixture.store.tokenCostScope(for: .codex)
+        CodexBarPersonalization.compactOverviewEnabledOverrideForTesting = nil
         fixture.settings.codexLocalSessionCostLedgerEnabled = true
         let localScope = fixture.store.tokenCostScope(for: .codex)
 
         #expect(managedScope.codexHomePath == "/tmp/managed-codex-home")
         #expect(managedScope.signature == "codex:managed:/tmp/managed-codex-home")
+        #expect(compactOverviewScope.codexHomePath == nil)
+        #expect(compactOverviewScope.signature == "codex:ambient")
         #expect(localScope.codexHomePath == nil)
         #expect(localScope.signature == "codex:ambient")
     }

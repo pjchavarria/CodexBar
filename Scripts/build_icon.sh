@@ -10,10 +10,6 @@ ICTOOL="$XCODE_APP/Contents/Applications/Icon Composer.app/Contents/Executables/
 if [[ ! -x "$ICTOOL" ]]; then
   ICTOOL="$XCODE_APP/Contents/Applications/Icon Composer.app/Contents/Executables/icontool"
 fi
-if [[ ! -x "$ICTOOL" ]]; then
-  echo "ictool/icontool not found. Set XCODE_APP if Xcode is elsewhere." >&2
-  exit 1
-fi
 
 ICONSET_DIR="$OUT_ROOT/${BASENAME}.iconset"
 TMP_DIR="$OUT_ROOT/tmp"
@@ -22,12 +18,33 @@ mkdir -p "$ICONSET_DIR" "$TMP_DIR"
 MASTER_ART="$TMP_DIR/icon_art_824.png"
 MASTER_1024="$TMP_DIR/icon_1024.png"
 
-# Render inner art (no margin) with macOS Default appearance
-"$ICTOOL" "$ICON_FILE" \
-  --export-preview macOS Default 824 824 1 -45 "$MASTER_ART"
+if [[ -x "$ICTOOL" ]]; then
+  # Render inner art (no margin) with macOS Default appearance.
+  "$ICTOOL" "$ICON_FILE" \
+    --export-preview macOS Default 824 824 1 -45 "$MASTER_ART"
 
-# Pad to 1024x1024 with transparent border
-sips --padToHeightWidth 1024 1024 "$MASTER_ART" --out "$MASTER_1024" >/dev/null
+  # Pad to 1024x1024 with transparent border.
+  sips --padToHeightWidth 1024 1024 "$MASTER_ART" --out "$MASTER_1024" >/dev/null
+else
+  # Xcode 26 no longer ships Icon Composer's preview exporter. Use the selected
+  # 1024-point source layer directly so locally packaged builds keep the checked-in icon.
+  SOURCE_IMAGE=$(python3 - "$ICON_FILE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+icon = Path(sys.argv[1])
+payload = json.loads((icon / "icon.json").read_text())
+name = payload["groups"][0]["layers"][0]["image-name"]
+print(icon / "Assets" / name)
+PY
+)
+  [[ -f "$SOURCE_IMAGE" ]] || {
+    echo "Icon source image not found: $SOURCE_IMAGE" >&2
+    exit 1
+  }
+  sips -z 1024 1024 "$SOURCE_IMAGE" --out "$MASTER_1024" >/dev/null
+fi
 
 # Generate required sizes
 sizes=(16 32 64 128 256 512 1024)

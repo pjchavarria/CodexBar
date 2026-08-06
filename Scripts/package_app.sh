@@ -244,6 +244,7 @@ if [[ "$LOWER_CONF" == "debug" && -z "${CODEXBAR_BUNDLE_ID:-}" ]]; then
   FEED_URL=""
   AUTO_CHECKS=false
 fi
+CACHE_SERVICE="${CODEXBAR_CACHE_SERVICE:-${BUNDLE_ID}.cache}"
 if [[ -n "${CODEXBAR_FEED_URL+x}" ]]; then
   FEED_URL="$CODEXBAR_FEED_URL"
 fi
@@ -378,6 +379,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CodexBuildTimestamp</key><string>${BUILD_TIMESTAMP}</string>
     <key>CodexGitCommit</key><string>${GIT_COMMIT}</string>
     <key>CodexBarTeamID</key><string>${APP_TEAM_ID}</string>
+    <key>CodexBarCacheService</key><string>${CACHE_SERVICE}</string>
     <key>UTExportedTypeDeclarations</key>
     <array>
         <dict>

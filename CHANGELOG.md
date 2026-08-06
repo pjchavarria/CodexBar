@@ -12,6 +12,10 @@
 - Menu bar: Session/Weekly/Auto pace layout tokens that render the signed pace delta (`+11%`, `-8%`, `0%`), restoring the pre-0.45 "Both" display in the layout editor (#2540, fixes #2534). Thanks @kratocz!
 
 ### Fixed
+- Personalization: restore Codex to the global provider-colored cost chart by reading the ambient local Codex session
+  ledger instead of the currently selected managed quota account, and equalize both cards in every two-column row.
+- Cursor/QuotaRoom: isolate the separately signed app's browser-session cache from upstream CodexBar's Keychain ACL so
+  Cursor cost/history refreshes no longer report a false session change after a successful cookie import.
 - Personalization: keep every configured Codex and Claude account visible in Route B, including unavailable accounts,
   make account discovery independent of the app's launcher environment, and widen the two-column menu so account
   identities remain readable.
@@ -41,6 +45,9 @@
 - Menu: switching provider tabs no longer flashes. The sibling-tab warmup now runs off a tracking-safe timer (the previous Task-based warmup never fired while the menu was open, which is the only time it matters), and provider tabs share one stable menu height via an invisible spacer, so a switch is a single-frame content swap with no window resize. Verified frame-by-frame with a new env-gated self-probe (`CODEXBAR_FLICKER_PROBE_DIR`).
 
 ### Changed
+- Personalization: rename the separately installed app to QuotaRoom, give it an independent bundle identity and
+  open-frame quota icon, preserve existing personal settings during the one-time migration, and unregister the legacy
+  CodexBar Personal login item while retaining its stopped bundle as a manual rollback.
 - Personalization: make Route B the personal app's only menu, with no tabs, provider submenus, alternate layouts,
   agent-session rows, or account cap; keep only Refresh, Settings, and Quit below the overview.
 - Packaging: add a separately signed CodexBar Personal installer that migrates settings once, preserves upstream

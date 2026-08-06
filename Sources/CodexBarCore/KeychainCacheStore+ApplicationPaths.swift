@@ -1,6 +1,35 @@
 import Foundation
 
 extension KeychainCacheStore {
+    static let cacheServiceInfoKey = "CodexBarCacheService"
+
+    static func configuredCacheServiceName(
+        infoDictionary: [String: Any]? = Bundle.main.infoDictionary,
+        bundleURL: URL = Bundle.main.bundleURL,
+        executableURL: URL? = Bundle.main.executableURL,
+        readPropertyList: (URL) -> [String: Any]? = { url in
+            guard let data = try? Data(contentsOf: url),
+                  let propertyList = try? PropertyListSerialization.propertyList(from: data, format: nil)
+            else { return nil }
+            return propertyList as? [String: Any]
+        }) -> String?
+    {
+        if let configured = self.nonEmptyCacheService(in: infoDictionary) {
+            return configured
+        }
+        guard let appBundle = self.appBundleURL(containing: bundleURL)
+            ?? executableURL.flatMap(self.appBundleURL(containing:))
+        else { return nil }
+        let infoURL = appBundle.appendingPathComponent("Contents/Info.plist")
+        return self.nonEmptyCacheService(in: readPropertyList(infoURL))
+    }
+
+    private static func nonEmptyCacheService(in infoDictionary: [String: Any]?) -> String? {
+        guard let value = infoDictionary?[self.cacheServiceInfoKey] as? String else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
     static func trustedApplicationPathsForCacheAccess(
         bundleURL: URL = Bundle.main.bundleURL,
         executableURL: URL? = Bundle.main.executableURL,

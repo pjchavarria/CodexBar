@@ -30,13 +30,15 @@
 - **Superseded by:** PD-009 keeps the two-column structure but makes every account its own provider-labeled card.
 
 ## PD-004 · Use a separate personal application identity
-- **Status:** locked
+- **Status:** superseded
 - **Locked:** 2026-08-04
 - **Decision:** Install the fork as CodexBar Personal beside upstream CodexBar, with its own bundle/settings identity,
   one-time settings migration, shared existing account stores, and no upstream Sparkle update feed.
 - **Why:** The fork must be usable daily without being overwritten by upstream releases, while upstream remains an
   untouched rollback and merge source.
 - **Applies to:** Packaging, signing, settings migration, installation, updates, and rollback.
+- **Superseded by:** PD-010 keeps the separate-app boundary and replaces the provisional CodexBar Personal identity
+  with QuotaRoom.
 
 ## PD-005 · Make Route B the complete personal-app surface
 - **Status:** superseded
@@ -106,11 +108,24 @@
 ## PD-010 · Give the sellable fork an independent identity
 - **Status:** locked
 - **Locked:** 2026-08-05
-- **Decision:** Replace the CodexBar product name and terminal-style icon with an independent, provider-neutral name and
-  icon before selling the app. Keep the upstream MIT copyright and permission notice in distributed copies. The exact
-  public name, icon construction, bundle identifier, and domain remain open until the user approves the rendered brand
-  direction and collision checks are complete.
+- **Decision:** Ship the personal fork as QuotaRoom at `/Applications/QuotaRoom.app`, using bundle identifier
+  `com.pxl.quotaroom` and the approved full-color open-frame quota icon for the application, Dock, and future storefront.
+  Keep the dynamic provider/usage menu-bar visualization unchanged for now. Keep the upstream MIT copyright and
+  permission notice in distributed copies. Keep CodexBar Personal only as a stopped manual rollback, with its launch
+  item unregistered so it cannot start beside QuotaRoom after login.
 - **Why:** A multi-provider paid product should not present itself as a Codex-only derivative or reuse upstream's
   terminal-command identity.
 - **Applies to:** Public naming, application icon, bundle/display name, packaging, release artifacts, storefront, and
-  license notices.
+  license notices. A public domain and storefront listing remain separate future decisions.
+
+## PD-011 · Prepare QuotaRoom for the Mac App Store without hiding providers
+- **Status:** locked
+- **Locked:** 2026-08-06
+- **Decision:** Make the Mac App Store QuotaRoom's intended public release channel. Keep the current notarizable direct
+  bundle as the working baseline while building and validating a separate sandboxed distribution path. The App Store
+  build must preserve the truthful complete-provider census; it may replace unsupported credential and data-access
+  mechanisms, but it must not silently omit providers or claim account usage it cannot fetch.
+- **Why:** The current unsandboxed bundle reads provider data from browser stores, local account homes, and installed
+  command-line tools, while the Mac App Store requires an appropriately sandboxed, self-contained application.
+- **Applies to:** Distribution architecture, entitlements, provider acquisition, App Store Connect metadata, privacy
+  disclosure, review evidence, and TestFlight release gates.

@@ -11,7 +11,7 @@
 
 ## KB-002 · Make Route B the only runtime surface and preserve every account
 - **Status:** active
-- **Last verified:** 2026-08-04
+- **Last verified:** 2026-08-06
 - **Use when:** Updating the compact multi-account overview or merging upstream menu/account changes.
 - **Knowledge:** Keep fork-only composition behind `CodexBarPersonalization` and dedicated views/extensions, but do not
   make Route B conditional on merged-icon or provider-count settings. The 420-point menu lays every enabled provider
@@ -23,6 +23,10 @@
   single-account presentation preferences narrow the only visible route. Retain typed cost/token values and provider
   identity through the one overview aggregation so
   KPIs, accessibility text, and the provider-stacked chart agree.
+  Cards are paired in enabled-provider order and each pair uses the taller measured card height; an unpaired final card
+  keeps its intrinsic height in the left column. Route B's Codex chart source is the ambient local session ledger rather
+  than the selected managed quota account, because the bottom dashboard is provider-global while the Codex cards are
+  account-scoped.
   When a selected single account has no per-account snapshot, project the provider-level snapshot or error through a
   model that still carries the configured account label; regression fixtures must leave the per-account snapshot
   collection empty to exercise that production path.
@@ -141,3 +145,39 @@
 - **Evidence:** The QuotaRoom/CodexBar account-card mock first arrived as an unsupported inline token, then a Quick Look
   render exposed light-mode and mojibake defects before the corrected dark PNG was attached on 2026-08-05.
 - **Revisit when:** T3 Code exposes a programmatic acknowledgement that a conversation image rendered successfully.
+
+## KB-010 · Isolate signed forks from upstream Keychain cache ACLs
+- **Status:** active
+- **Last verified:** 2026-08-06
+- **Use when:** Packaging a separately signed CodexBar fork or verifying a provider used by both cards and the aggregate
+  cost dashboard.
+- **Knowledge:** Give every separately signed bundle its own `CodexBarCacheService` value derived from its bundle
+  identifier, and make bundled helpers read that value from the containing app. Reusing
+  `com.steipete.codexbar.cache` lets an upstream-created trusted-application ACL reject the fork without UI. For a
+  provider that contributes both account status and cost history, installed QA must exercise both `usage` and `cost`;
+  identity-only fallback can make the first green while the dashboard remains broken.
+- **Why:** QuotaRoom's Cursor usage passed through Cursor Agent while its cost refresh repeatedly failed after the
+  browser-session cache write was refused by the upstream cache item's ACL.
+- **Evidence:** `Sources/CodexBarCore/KeychainCacheStore.swift`,
+  `Sources/CodexBarCore/KeychainCacheStore+ApplicationPaths.swift`, `Scripts/package_app.sh`, and installed Cursor
+  usage/cost probes on 2026-08-06: after one user-controlled Chrome authorization, two usage reads and two cost reads
+  returned valid non-error Cursor data and the fresh QuotaRoom process logged zero session-change failures.
+- **Revisit when:** Keychain storage moves to access-group sharing or Cursor exposes one supported session source for
+  both status and cost history.
+
+## KB-011 · Retire the predecessor login item during a bundle rename
+- **Status:** active
+- **Last verified:** 2026-08-06
+- **Use when:** Replacing an installed menu-bar app with a new bundle identifier while preserving the old bundle for
+  rollback.
+- **Knowledge:** Copying the old `launchAtLogin` preference to the new settings domain enables the new
+  `SMAppService.mainApp` registration but does not unregister the old bundle's independent registration. Stop both
+  apps, persist `launchAtLogin=false` in the old domain, launch the old bundle in the background so it unregisters
+  itself, verify the background-task record is disabled, then launch the replacement. The old bundle may remain as a
+  stopped manual rollback.
+- **Why:** Both CodexBar Personal and QuotaRoom were enabled login items after the rename, so the next login could
+  resurrect two personal apps even though only QuotaRoom was currently running.
+- **Evidence:** `Scripts/install_personal_app.sh`, `Scripts/test_personal_app_installer.sh`, and the 2026-08-06
+  `sfltool dumpbtm` audit showing CodexBar Personal disabled and QuotaRoom enabled.
+- **Revisit when:** The legacy personal bundle is permanently removed or Apple provides a supported API for one bundle
+  to unregister another bundle's main-app login item.

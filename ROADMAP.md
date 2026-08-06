@@ -2,8 +2,8 @@
 
 ## Active
 
-- [Reviewer provider accounts](docs/reviewer-accounts.md) — Cursor and Grok are connected without routing; finish the
-  standalone Google Antigravity login, then stop until reviewer roles have an explicit evaluation plan.
+- [Mac App Store release readiness](docs/app-store-release.md) — prove a sandboxed QuotaRoom build can preserve every
+  enabled provider before creating the first production submission.
 
 ## Shipped (2026-08-04)
 
@@ -12,4 +12,6 @@
 
 ## Later
 
+- [Reviewer provider accounts](docs/reviewer-accounts.md) — Cursor, Grok, and Google Antigravity are connected without
+  routing; resume only after reviewer roles have an explicit evaluation plan.
 - Revisit the menu-bar visualization only after the compact overview is running with real account data.

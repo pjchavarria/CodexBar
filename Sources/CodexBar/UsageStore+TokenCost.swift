@@ -275,7 +275,7 @@ extension UsageStore {
         guard provider == .codex else {
             return (nil, provider.rawValue)
         }
-        if self.settings.codexLocalSessionCostLedgerEnabled {
+        if self.settings.codexLocalSessionCostLedgerEnabled || CodexBarPersonalization.compactOverviewEnabled {
             return (nil, "codex:ambient")
         }
         let activeSource = self.settings.codexActiveSource

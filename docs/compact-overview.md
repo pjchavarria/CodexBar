@@ -1,10 +1,10 @@
-_Status: shipped · 2026-08-04_
+_Status: shipped · 2026-08-05_
 
 # Compact Multi-Account Overview
 
 ## Resume here
 
-Keep the approved Route B compact overview working at 420 points in the separately installed CodexBar Personal app,
+Keep the approved Route B compact overview working at 420 points in the separately installed QuotaRoom app,
 validate it with synthetic rendering and packaged-app runtime geometry, then merge future upstream releases into the
 fork without spreading personalization into provider code.
 
@@ -16,10 +16,12 @@ fork without spreading personalization into provider code.
   settings, and provider submenus.
 - The fork adds a presentation seam, a compact account-card grid, and account-to-card projection. It does not add another
   credential store, fetcher, parser, or chart data source.
-- `Scripts/install_personal_app.sh` packages and installs `/Applications/CodexBar Personal.app` with a separate bundle
-  identity, imports upstream settings once, uses the existing shared account stores, and leaves upstream CodexBar intact.
+- `Scripts/install_personal_app.sh` packages and installs `/Applications/QuotaRoom.app` with separate bundle and
+  Keychain-cache identities, imports upstream settings once, uses the existing shared account stores, and leaves
+  upstream CodexBar intact.
   The personal package disables Sparkle updates, the widget, and iCloud app-group sync until matching personal
-  provisioning is deliberately configured.
+  provisioning is deliberately configured. It also unregisters the legacy CodexBar Personal login item before
+  launching QuotaRoom, while leaving the stopped legacy bundle available as a manual rollback.
 
 ## Direction
 
@@ -27,7 +29,8 @@ fork without spreading personalization into provider code.
   cards and ordinary identities remain readable in both columns.
 - Always open the merged multi-provider menu on Overview and omit the provider switcher.
 - Lay every available account into one two-column grid. Each card repeats the provider icon/name, account identity,
-  truthful error state, and that provider's quota rows; keep same-provider accounts adjacent.
+  truthful error state, and that provider's quota rows; keep same-provider accounts adjacent. Measure each pair as one
+  row and give both cards the taller sibling's height so Cursor/Grok and future mixed-provider pairs stay aligned.
 - Do not cap the account grid or drop an account when usage is missing, stale, or failed; render its identity and
   truthful status while retaining the same two-column flow.
 - Keep every enabled provider in Route B even when its current fetch is error-only. Google Antigravity reads real usage
@@ -43,6 +46,8 @@ fork without spreading personalization into provider code.
   model at the bottom of the entire overview, without dashboard detail lines. Keep the four KPIs global while stacking
   each chart day by provider color with a text legend. Aggregate retained typed usage values and provider identity
   before currency, token totals, chart points, and accessibility text are formatted.
+- Route B's Codex chart contribution is the ambient local Codex session ledger, independent of which managed account is
+  selected for quota monitoring. Account cards remain account-scoped; the bottom chart remains provider-global.
 - Route B is the only runtime menu: do not attach provider tabs, submenus, alternate layouts, or agent-session rows.
   Keep bottom Refresh, Settings, and Quit actions.
 - Leave the status-item visualization unchanged until a later design decision.
@@ -61,18 +66,19 @@ layout proof plus the repository test/check commands, then inspect the synthetic
 Keep the installed personal app current by merging `upstream/main`, rerunning the personal installer, and confirming
 that every known account identity from every enabled provider appears in the two-column card grid, every enabled
 provider has a visible truthful state, and the bottom chart separates every available typed cost source without
-duplicating account cards.
+duplicating account cards. Public distribution now continues through the
+[Mac App Store release readiness brief](app-store-release.md); do not weaken the complete-provider promise merely to
+produce an uploadable sandbox build.
 
-## Open rebrand iteration
+## Locked product identity
 
-The account-card mock is approved and implemented. The remaining design decision is the sellable product identity.
-`QuotaRoom` is the current recommended name after eliminating direct-category collisions. The recommended icon system
-uses the rendered full-color open frame for the app, Dock, and storefront, plus a simplified monochrome frame-and-notch
-template glyph for the menu bar. Neither is approved or wired into the app yet. Domain registry availability is not
-trademark clearance or registrar purchase proof.
+The account-card mock is approved and implemented. The sellable product identity is QuotaRoom. The application uses
+the full-color open-frame quota icon and `com.pxl.quotaroom` bundle/settings identity; the existing dynamic status-item
+visualization remains unchanged. Domain registry availability is not trademark clearance or registrar purchase proof.
 
-The missing first Codex credential remains a separate runtime defect: the installed app can only show independently
-usable usage for credentials that have completed the managed-account authentication checkpoint.
+The installed QuotaRoom audit confirms two healthy managed Codex accounts, two fresh claude-swap accounts, healthy
+Grok and Antigravity usage, and healthy Cursor quota and cost/history paths. The installed QuotaRoom helper returned
+valid non-error Cursor usage and cost data twice after the bundle-specific Keychain cache repair.
 
 ## Direction log
 
@@ -101,3 +107,16 @@ usable usage for credentials that have completed the managed-account authenticat
   branding remains open pending approval of the researched render.
 - 2026-08-05: Rebrand research kept QuotaRoom over the more natural Spare because Spare has a direct AI-brand
   collision, and sharpened icon A into separate full-color app/storefront artwork and a monochrome menu-bar template.
+- 2026-08-06: The user locked QuotaRoom and the open-frame application icon. The menu-bar visualization remains
+  provider/usage-driven and deferred.
+- 2026-08-06: Cursor completion now requires both installed usage and cost/history probes; a passing identity-only
+  Cursor Agent fallback cannot prove the aggregate dashboard path.
+- 2026-08-06: The installed QuotaRoom census verified two Codex accounts, two Claude accounts, Grok, Antigravity, and
+  Cursor Agent identity. Cursor's remaining browser authorization was a visible user checkpoint, not a background
+  session-mutation failure.
+- 2026-08-06: The user completed Cursor authorization; two installed usage and cost/history probes now verify its full
+  card and aggregate-dashboard paths.
+- 2026-08-06: The user required paired cards to share a row height and the global chart to retain Codex alongside
+  Claude and Cursor.
+- 2026-08-06: The user chose the Mac App Store as QuotaRoom's public release target. The first release checkpoint is a
+  sandbox compatibility proof for the complete provider set, not a reduced-provider upload.
