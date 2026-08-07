@@ -198,3 +198,20 @@
   it is the conventional identifier for a credential store in auth SDKs, while the product's most review-sensitive
   mechanism is reading credentials belonging to other applications; it is also a generic engineering term, which
   weakens search and trademark distinctiveness.
+## PD-017 · Name the standalone product TokenReserve
+- **Status:** locked
+- **Locked:** 2026-08-06
+- **Decision:** The standalone product is named TokenReserve. Bundle identity, repository naming, domain, storefront
+  metadata, icon, and public copy may now be produced under that name, which closes the provisional hold PD-015 placed
+  on storefront work. The withdrawn PD-016 is not revived; TokenStorage remains rejected.
+- **Why:** The user locked it after a full naming round. "Reserve" names remaining capacity, which is what the product
+  is opened to find out, and it drops the credential-vault reading that made TokenStorage misdescribe the app's most
+  review-sensitive behaviour. Two objections raised against it did not survive scrutiny: the DeFi phrase collision does
+  not reach a buyer who arrives from a screenshot or a qualified query, and a name points at the domain rather than at
+  the dominant on-screen formatter.
+- **Residual risk:** "Token" is not the displayed unit for every provider — Grok renders Credits, Cursor and
+  Antigravity render window percentages, and tokens appear only in the bottom summary strip. Copy and screenshots
+  should lead with remaining capacity rather than token counts so the name is not read as a promise about units.
+- **Applies to:** Product naming, bundle identity, repository naming, domains, storefront metadata, public assets, and
+  marketing copy.
+
