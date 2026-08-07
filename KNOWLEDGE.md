@@ -233,3 +233,27 @@
   pool genuinely serves two distinct provider account ids — the Claude precedent in KB-001 is to withhold the suspect
   numbers rather than merge the rows.
 
+## KB-014 · A hung test here is usually the app-group container, not the diff
+- **Status:** active
+- **Last verified:** 2026-08-06
+- **Use when:** A `swift test` run stops producing output with tests started and never finished, especially
+  in `CodexManagedRoutingTests` or anything that drives a full `UsageStore.refresh()` (a bare
+  `refreshProvider` does not reach the snapshot).
+- **Knowledge:** A full refresh ends in `persistWidgetSnapshot`, and `AppGroupSupport.snapshotURL` resolves
+  to `~/Library/Group Containers/<group>/widget-snapshot.json` whenever a group container is available. macOS
+  serves that directory through `containermanagerd`; when that daemon wedges, `open()` on any group container
+  blocks forever and the test process sits at 0% CPU with no timeout. Diagnose without touching this
+  repository: `sample <pid>` shows the stack ending in `open`, and `ls` on an unrelated group container such
+  as `2DC432GLL2.com.openai.codex.notifications` hangs identically while `~/Library/Group Containers` itself
+  lists instantly. Confirm a diff is innocent by stashing it and rerunning the same filter at the baseline
+  commit; the same tests hang. Suites that never touch a refresh — `CodexProfileHomeAccountTests`,
+  `CodexAccountReconciliationTests` — still run in well under a second, so verification is not blocked, only
+  narrowed. Recovery needs a privileged `containermanagerd` restart or a reboot, which is the user's call.
+- **Why:** The failure looks exactly like an infinite loop introduced by the change under review, so the
+  reflex is to bisect the diff, and a reviewer that demands the hung suite's results blocks a correct change
+  on a machine fault.
+- **Evidence:** `Sources/CodexBarCore/AppGroupSupport.swift` (`snapshotURL`, `currentContainerURL`),
+  `Sources/CodexBarCore/WidgetSnapshot.swift:188-203`, and the 2026-08-06 baseline comparison in which the
+  identical ten `CodexManagedRoutingTests` tests hung with and without the working-tree changes.
+- **Revisit when:** The widget snapshot store gains a bounded read, or tests inject a temporary snapshot
+  directory instead of resolving the real container.
