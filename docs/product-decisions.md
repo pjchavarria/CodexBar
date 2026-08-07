@@ -177,10 +177,24 @@
 - **Applies to:** Local installation, bundle replacement, predecessor cleanup, packaging tests, and handoff language.
 
 ## PD-015 · Retire the QuotaRoom name
-- **Status:** locked
+- **Status:** superseded
 - **Locked:** 2026-08-06
 - **Decision:** Do not release the standalone product as QuotaRoom. Keep the approved icon and menu-bar visualization
   direction provisional until the final name is chosen; do not reserve a bundle identifier, App Store record, or domain
   under a brainstorm candidate.
 - **Why:** The user rejected the assembled “quota + room” mechanism metaphor before storefront work began.
 - **Applies to:** Product naming, bundle identity, repository naming, domains, storefront metadata, and public assets.
+- **Superseded by:** PD-016 closes the open naming question.
+
+## PD-016 · Name the standalone product TokenStorage
+- **Status:** locked
+- **Locked:** 2026-08-06
+- **Decision:** Release the standalone product as TokenStorage. Use that name for the repository, application display
+  name, bundle identity, and storefront listing. Reserving a bundle identifier, App Store Connect record, or domain
+  still waits on the distribution-channel decision.
+- **Why:** Paul chose the name directly, after rejecting QuotaRoom and the alternative shortlist.
+- **Residual risk, accepted:** `TokenStorage` is the conventional identifier for a credential store in auth SDKs, and
+  the product's most review-sensitive mechanism is reading credentials that belong to other applications, so the name
+  names that surface rather than the user promise. It is also a generic engineering term, which weakens search and
+  trademark distinctiveness. Recorded once here; the decision stands.
+- **Applies to:** Product naming, repository naming, bundle identity, domains, storefront metadata, and public assets.
