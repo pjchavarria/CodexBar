@@ -55,7 +55,68 @@ public enum CodexActiveSourceResolver {
             return self.resolvedSource(for: storedAccount, snapshot: snapshot)
         }
 
-        return .profileHome(path: path)
+        return self.absorbingSource(path: path, snapshot: snapshot) ?? .profileHome(path: path)
+    }
+
+    /// A profile home can hold the same credential as another row under a different path. Only the
+    /// first row for an identity is rendered, so a selection pointing at an absorbed path must
+    /// resolve to the row that survived; otherwise the selection matches no row and nothing is
+    /// active. Candidates are walked in the order the projection appends drafts.
+    private static func absorbingSource(
+        path: String,
+        snapshot: CodexAccountReconciliationSnapshot) -> CodexActiveSource?
+    {
+        guard let profileAccount = snapshot.profileHomeAccount(path: path) else { return nil }
+        let identity = snapshot.runtimeIdentity(for: profileAccount)
+        let email = profileAccount.email
+
+        if let storedAccount = snapshot.storedAccounts.first(where: {
+            CodexIdentityMatcher.matches(
+                snapshot.runtimeIdentity(for: $0),
+                lhsEmail: snapshot.runtimeEmail(for: $0),
+                identity,
+                rhsEmail: email)
+        }) {
+            return self.resolvedSource(for: storedAccount, snapshot: snapshot)
+        }
+
+        if let liveSystemAccount = snapshot.liveSystemAccount,
+           CodexIdentityMatcher.matches(
+               snapshot.runtimeIdentity(for: liveSystemAccount),
+               lhsEmail: liveSystemAccount.email,
+               identity,
+               rhsEmail: email)
+        {
+            return .liveSystem
+        }
+
+        return self.absorbingProfileSource(path: path, identity: identity, email: email, snapshot: snapshot)
+    }
+
+    private static func absorbingProfileSource(
+        path: String,
+        identity: CodexIdentity,
+        email: String,
+        snapshot: CodexAccountReconciliationSnapshot) -> CodexActiveSource?
+    {
+        let livePath = snapshot.liveSystemAccount.flatMap { CodexHomeScope.normalizedHomePath($0.codexHomePath) }
+        let managedPaths = Set(snapshot.storedAccounts.compactMap {
+            CodexHomeScope.normalizedHomePath($0.managedHomePath)
+        })
+        for candidate in snapshot.profileHomeAccounts {
+            guard let candidatePath = CodexHomeScope.normalizedHomePath(candidate.codexHomePath) else { continue }
+            if candidatePath == path { return nil }
+            guard candidatePath != livePath, !managedPaths.contains(candidatePath) else { continue }
+            if CodexIdentityMatcher.matches(
+                snapshot.runtimeIdentity(for: candidate),
+                lhsEmail: candidate.email,
+                identity,
+                rhsEmail: email)
+            {
+                return .profileHome(path: candidatePath)
+            }
+        }
+        return nil
     }
 
     private static func resolvedSource(

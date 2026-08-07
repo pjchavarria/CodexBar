@@ -66,6 +66,170 @@ struct CodexProfileHomeAccountTests {
 
     @Test
     @MainActor
+    func `profile home sharing the live account identity does not add a second card`() throws {
+        let suite = "CodexProfileHomeAccountTests-duplicate-identity"
+        let settings = try Self.makeSettings(suite: suite)
+        let liveHome = FileManager.default.temporaryDirectory.appendingPathComponent(
+            UUID().uuidString,
+            isDirectory: true)
+        let profileHome = FileManager.default.temporaryDirectory.appendingPathComponent(
+            UUID().uuidString,
+            isDirectory: true)
+        try Self.writeCodexAuthFile(
+            homeURL: liveHome,
+            email: "Shared@Example.com",
+            plan: "pro",
+            accountID: "acct_shared")
+        try Self.writeCodexAuthFile(
+            homeURL: profileHome,
+            email: "Shared@Example.com",
+            plan: "pro",
+            accountID: "acct_shared")
+        settings._test_codexReconciliationEnvironment = ["CODEX_HOME": liveHome.path]
+        settings.updateProviderConfig(provider: .codex) { entry in
+            entry.codexProfileHomePaths = [profileHome.path]
+        }
+        defer {
+            settings._test_codexReconciliationEnvironment = nil
+            try? FileManager.default.removeItem(at: liveHome)
+            try? FileManager.default.removeItem(at: profileHome)
+        }
+
+        let snapshot = settings.codexAccountReconciliationSnapshot
+        let projection = settings.codexVisibleAccountProjection
+
+        #expect(snapshot.liveSystemAccount != nil)
+        #expect(snapshot.profileHomeAccounts.count == 1)
+        #expect(projection.visibleAccounts.map(\.email) == ["shared@example.com"])
+        #expect(projection.visibleAccounts.first?.selectionSource == .liveSystem)
+    }
+
+    @Test
+    @MainActor
+    func `selecting a profile home that duplicates the live identity resolves to the live account`() throws {
+        let suite = "CodexProfileHomeAccountTests-selected-duplicate-live"
+        let settings = try Self.makeSettings(suite: suite)
+        let liveHome = FileManager.default.temporaryDirectory.appendingPathComponent(
+            UUID().uuidString,
+            isDirectory: true)
+        let profileHome = FileManager.default.temporaryDirectory.appendingPathComponent(
+            UUID().uuidString,
+            isDirectory: true)
+        try Self.writeCodexAuthFile(
+            homeURL: liveHome,
+            email: "Selected@Example.com",
+            plan: "pro",
+            accountID: "acct_selected")
+        try Self.writeCodexAuthFile(
+            homeURL: profileHome,
+            email: "Selected@Example.com",
+            plan: "pro",
+            accountID: "acct_selected")
+        settings._test_codexReconciliationEnvironment = ["CODEX_HOME": liveHome.path]
+        settings.updateProviderConfig(provider: .codex) { entry in
+            entry.codexProfileHomePaths = [profileHome.path]
+            entry.codexActiveSource = .profileHome(path: profileHome.path)
+        }
+        defer {
+            settings._test_codexReconciliationEnvironment = nil
+            try? FileManager.default.removeItem(at: liveHome)
+            try? FileManager.default.removeItem(at: profileHome)
+        }
+
+        let projection = settings.codexVisibleAccountProjection
+
+        #expect(settings.codexResolvedActiveSource == .liveSystem)
+        #expect(projection.visibleAccounts.count == 1)
+        #expect(projection.activeVisibleAccountID != nil)
+        #expect(settings.persistResolvedCodexActiveSourceCorrectionIfNeeded())
+        #expect(settings.codexActiveSource == .liveSystem)
+    }
+
+    @Test
+    @MainActor
+    func `selecting the second of two identical profile homes resolves to the rendered one`() throws {
+        let suite = "CodexProfileHomeAccountTests-selected-duplicate-profile"
+        let settings = try Self.makeSettings(suite: suite)
+        let missingLiveHome = FileManager.default.temporaryDirectory.appendingPathComponent(
+            UUID().uuidString,
+            isDirectory: true)
+        let firstProfileHome = FileManager.default.temporaryDirectory.appendingPathComponent(
+            UUID().uuidString,
+            isDirectory: true)
+        let secondProfileHome = FileManager.default.temporaryDirectory.appendingPathComponent(
+            UUID().uuidString,
+            isDirectory: true)
+        for home in [firstProfileHome, secondProfileHome] {
+            try Self.writeCodexAuthFile(
+                homeURL: home,
+                email: "Twin@Example.com",
+                plan: "pro",
+                accountID: "acct_twin")
+        }
+        settings._test_codexReconciliationEnvironment = ["CODEX_HOME": missingLiveHome.path]
+        settings.updateProviderConfig(provider: .codex) { entry in
+            entry.codexProfileHomePaths = [firstProfileHome.path, secondProfileHome.path]
+            entry.codexActiveSource = .profileHome(path: secondProfileHome.path)
+        }
+        defer {
+            settings._test_codexReconciliationEnvironment = nil
+            try? FileManager.default.removeItem(at: missingLiveHome)
+            try? FileManager.default.removeItem(at: firstProfileHome)
+            try? FileManager.default.removeItem(at: secondProfileHome)
+        }
+
+        let normalizedFirstPath = try #require(CodexHomeScope.normalizedHomePath(firstProfileHome.path))
+        let projection = settings.codexVisibleAccountProjection
+
+        #expect(settings.codexResolvedActiveSource == .profileHome(path: normalizedFirstPath))
+        #expect(projection.visibleAccounts.count == 1)
+        #expect(projection.activeVisibleAccountID != nil)
+        #expect(settings.persistResolvedCodexActiveSourceCorrectionIfNeeded())
+        #expect(settings.codexActiveSource == .profileHome(path: normalizedFirstPath))
+    }
+
+    @Test
+    @MainActor
+    func `profile homes with distinct account ids stay separate cards`() throws {
+        let suite = "CodexProfileHomeAccountTests-distinct-accounts"
+        let settings = try Self.makeSettings(suite: suite)
+        let missingLiveHome = FileManager.default.temporaryDirectory.appendingPathComponent(
+            UUID().uuidString,
+            isDirectory: true)
+        let firstProfileHome = FileManager.default.temporaryDirectory.appendingPathComponent(
+            UUID().uuidString,
+            isDirectory: true)
+        let secondProfileHome = FileManager.default.temporaryDirectory.appendingPathComponent(
+            UUID().uuidString,
+            isDirectory: true)
+        try Self.writeCodexAuthFile(
+            homeURL: firstProfileHome,
+            email: "first@example.com",
+            plan: "pro",
+            accountID: "acct_first")
+        try Self.writeCodexAuthFile(
+            homeURL: secondProfileHome,
+            email: "second@example.com",
+            plan: "pro",
+            accountID: "acct_second")
+        settings._test_codexReconciliationEnvironment = ["CODEX_HOME": missingLiveHome.path]
+        settings.updateProviderConfig(provider: .codex) { entry in
+            entry.codexProfileHomePaths = [firstProfileHome.path, secondProfileHome.path]
+        }
+        defer {
+            settings._test_codexReconciliationEnvironment = nil
+            try? FileManager.default.removeItem(at: missingLiveHome)
+            try? FileManager.default.removeItem(at: firstProfileHome)
+            try? FileManager.default.removeItem(at: secondProfileHome)
+        }
+
+        let projection = settings.codexVisibleAccountProjection
+
+        #expect(projection.visibleAccounts.map(\.email).sorted() == ["first@example.com", "second@example.com"])
+    }
+
+    @Test
+    @MainActor
     func `provider registry scopes selected codex profile home`() throws {
         let suite = "CodexProfileHomeAccountTests-routing"
         let settings = try Self.makeSettings(suite: suite)

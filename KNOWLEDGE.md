@@ -195,3 +195,41 @@
   and the architecture adversary that upheld a new repository unless a compiled dependency-closure spike proves the
   provider core is already separable.
 - **Revisit when:** A compiled thin-target spike satisfies that falsifier or the five-provider product promise changes.
+
+## KB-013 · Codex rows have three sources; only identity proves two accounts
+- **Status:** active
+- **Last verified:** 2026-08-06
+- **Use when:** Someone reports the overview showing one account twice, proposes keying accounts by configuration
+  directory, or proposes collapsing rows that "must be" the same account.
+- **Knowledge:** `CodexVisibleAccountProjection.make` builds visible rows from three sources: every managed store
+  account, the live ambient home (`$CODEX_HOME`, else `~/.codex`), and every path configured in
+  `codexProfileHomePaths`. The managed store deduplicates on email plus provider account id, and the live account is
+  matched against existing drafts through `CodexIdentityMatcher` and merged. Profile homes were filtered on path
+  alone until 2026-08-06, so a configured home holding the same credential as the live login or a managed account
+  produced a second card for one account and counted its quota twice; they now pass the same identity check.
+  Dropping a row is only half the change: the persisted selection can still point at the absorbed path, and a
+  selection matching no rendered row leaves nothing active, so `UsageStore+TokenAccounts` never binds an account and
+  the provider stops publishing a snapshot. `CodexActiveSourceResolver.resolvedProfileSource` therefore remaps an
+  absorbed profile path onto whichever row survived — managed, live, or the first profile home for that identity —
+  which also makes `persistResolvedCodexActiveSourceCorrectionIfNeeded()` heal the stored value. Any future row
+  filter owes the same pairing: never drop a draft without remapping selections that could name it.
+  Confirm any duplicate claim by decoding the `sub`, `chatgpt_account_id`, and plan claims from each home's
+  `auth.json` locally — no network call, no keychain prompt, no provider quota spent. Two rows prove two accounts
+  only once that decode agrees.
+- **Why:** Agent tooling keeps its own `CODEX_HOME` directories (`~/.codex`, `~/.codex-t3/account-2`) that can be
+  signed into a single account, and the dispatch wrapper reports that duplication. The app never discovers those
+  homes on its own, but it does read the ambient home and any profile home a user configures, so the tooling's
+  duplication and the app's rows are separate facts that look alike and get conflated. On 2026-08-06 the two rows on
+  this machine were two managed accounts resolving to two different Google subjects and two different ChatGPT account
+  ids, whose email addresses differ but share their first eleven characters — correct rows that read as duplicates at
+  card width.
+- **Evidence:** `Sources/CodexBarCore/Providers/Codex/CodexVisibleAccountProjection.swift` (`make`, profile-home
+  identity guard), `Sources/CodexBarCore/CodexManagedAccounts.swift` (`sanitizedAccounts`),
+  `Sources/CodexBarCore/Providers/Codex/CodexAccountReconciliation.swift` (`CodexIdentityMatcher`,
+  `CodexActiveSourceResolver.absorbingSource`), and `Tests/CodexBarTests/CodexProfileHomeAccountTests.swift`, whose
+  duplicate-identity case renders two cards without the guard and whose selected-duplicate cases leave no active
+  account without the remap.
+- **Revisit when:** A row source is added that cannot supply an identity, or a case appears where one subscription
+  pool genuinely serves two distinct provider account ids — the Claude precedent in KB-001 is to withhold the suspect
+  numbers rather than merge the rows.
+

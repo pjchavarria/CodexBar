@@ -191,8 +191,14 @@ extension CodexVisibleAccountProjection {
             else {
                 continue
             }
+            let profileEmail = Self.normalizeVisibleEmail(profileAccount.email)
+            let profileIdentity = snapshot.runtimeIdentity(for: profileAccount)
+            // Distinct paths do not imply distinct accounts: a configured profile home can hold the
+            // same credential as the live login or a managed account. Appending it would show one
+            // account as two cards and count its quota twice in the aggregate.
+            guard !Self.contains(drafts, identity: profileIdentity, email: profileEmail) else { continue }
             drafts.append(VisibleAccountDraft(
-                email: Self.normalizeVisibleEmail(profileAccount.email),
+                email: profileEmail,
                 workspaceLabel: Self.normalizeWorkspaceLabel(profileAccount.workspaceLabel),
                 workspaceAccountID: profileAccount.workspaceAccountID,
                 authFingerprint: profileAccount.authFingerprint,
@@ -201,7 +207,7 @@ extension CodexVisibleAccountProjection {
                 isLive: false,
                 canReauthenticate: false,
                 canRemove: false,
-                identity: snapshot.runtimeIdentity(for: profileAccount)))
+                identity: profileIdentity))
         }
 
         let groupedByEmail = Dictionary(grouping: drafts.indices, by: { drafts[$0].email })
@@ -250,6 +256,16 @@ extension CodexVisibleAccountProjection {
 
     private static func normalizeVisibleEmail(_ email: String) -> String {
         email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private static func contains(
+        _ drafts: [VisibleAccountDraft],
+        identity: CodexIdentity,
+        email: String) -> Bool
+    {
+        drafts.contains { draft in
+            CodexIdentityMatcher.matches(draft.identity, lhsEmail: draft.email, identity, rhsEmail: email)
+        }
     }
 
     private static func normalizeWorkspaceLabel(_ workspaceLabel: String?) -> String? {
