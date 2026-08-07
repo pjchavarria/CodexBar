@@ -191,7 +191,7 @@
 - **Why:** The current app target contains 419 Swift files, 65 immediate provider directories, and Sync. The five desired
   provider folders still depend on broad settings, OAuth/session, projection, browser, and process machinery, so an
   in-repo thin target would preserve the coupling the rewrite is meant to remove.
-- **Evidence:** `docs/app-store-release.md`, `docs/product-decisions.md`, the 2026-08-06 deterministic source inventory,
+- **Evidence:** `docs/standalone-release.md`, `docs/product-decisions.md`, the 2026-08-06 deterministic source inventory,
   and the architecture adversary that upheld a new repository unless a compiled dependency-closure spike proves the
   provider core is already separable.
 - **Revisit when:** A compiled thin-target spike satisfies that falsifier or the five-provider product promise changes.

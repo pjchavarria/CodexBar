@@ -2,8 +2,8 @@
 
 ## Active
 
-- [Standalone app and Mac App Store release](docs/app-store-release.md) — choose the final name, scaffold the new
-  repository, and prove the approved five-provider grid in a sandboxed build before the first production submission.
+- [TokenReserve standalone release](docs/standalone-release.md) — the name and the channel are locked; scaffold the new
+  repository and prove the approved five-provider grid against fixtures before any live credential is read.
 - [Reviewer provider evaluation](docs/reviewer-accounts.md) — score Codex 2, Claude 2, Cursor, Grok, and Antigravity on a
   frozen three-task corpus before promoting any new production route or changing Luna Medium to Luna Max.
 

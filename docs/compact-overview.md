@@ -56,21 +56,23 @@ into the replacement architecture.
 Use `CodexBarPersonalization`, `CompactOverviewProviderCard`, and `StatusItemController+CompactOverview` to recover the
 approved behavior, not as a module boundary to copy wholesale. The standalone app may migrate only dependency-light
 typed models, parsers, fixtures, provider colors, formatting rules, and view behavior after an explicit dependency and
-license audit. It must not inherit the upstream controller, settings, Sync, updater, widget, hook, telemetry, provider
-submenu, alternate-layout, browser-scraping, or external-process graph.
+license audit. It must not inherit the upstream controller, settings, Sync, widget, hook, telemetry, provider
+submenu, alternate-layout, or external-process graph. Two earlier exclusions are lifted by the direct-download lock
+(PD-018): Sparkle and the update channel are now required, and the browser-cookie and credential-file acquisition paths
+stay legal and migrate.
 
 ## Next checkpoint
 
-Choose the standalone product name, scaffold its new repository, and reproduce the fixture-backed card grid and chart.
-Public distribution continues through the [standalone App Store release brief](app-store-release.md); do not weaken the
-complete-provider promise merely to produce an uploadable sandbox build.
+Reproduce the fixture-backed card grid and chart in the scaffolded TokenReserve repository. Public distribution
+continues through the [TokenReserve standalone release brief](standalone-release.md); do not weaken the
+complete-provider promise for any packaging convenience.
 
 ## Product identity
 
-The account-card mock is approved and implemented. QuotaRoom is retired; the final sellable name, bundle identifier,
-repository name, and storefront identity remain open. The full-color open-frame icon and existing dynamic status-item
-visualization are provisional until the chosen name is applied. Domain registry availability is not trademark
-clearance or registrar purchase proof.
+The account-card mock is approved and implemented. QuotaRoom is retired and the sellable name is TokenReserve
+(PD-017), distributed as a direct download (PD-018). The full-color open-frame icon and existing dynamic status-item
+visualization are provisional until that name is applied. Domain registry availability is not trademark clearance or
+registrar purchase proof.
 
 The installed QuotaRoom audit confirms two healthy managed Codex accounts, two fresh claude-swap accounts, healthy
 Grok and Antigravity usage, and healthy Cursor quota and cost/history paths. The installed QuotaRoom helper returned
@@ -115,6 +117,7 @@ valid non-error Cursor usage and cost data twice after the bundle-specific Keych
 - 2026-08-06: The user required paired cards to share a row height and the global chart to retain Codex alongside
   Claude and Cursor.
 - 2026-08-06: The user chose the Mac App Store as QuotaRoom's public release target. The first release checkpoint is a
-  sandbox compatibility proof for the complete provider set, not a reduced-provider upload.
+  sandbox compatibility proof for the complete provider set, not a reduced-provider upload. **Superseded the same day
+  by PD-018:** the channel is a direct download and the sandbox proof is retired.
 - 2026-08-06: The user rejected QuotaRoom, replaced the fork strategy with a minimal standalone app in a new repository,
   and removed persistent rollback launchables. This document is now the behavior oracle for that replacement.

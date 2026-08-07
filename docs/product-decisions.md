@@ -150,7 +150,9 @@
   approved product is one menu surface over five providers. A new repository makes excluded systems a structural
   boundary instead of a convention inside a coupled upstream tree.
 - **Applies to:** Repository ownership, migration sequencing, source reuse, provider adapters, testing, packaging, and
-  App Store release architecture.
+  release architecture.
+- **Superseded in part by:** PD-018 — the release channel is a direct download, not the Mac App Store. Every other
+  decision in this entry remains locked.
 
 ## PD-013 · Evaluate additional agent providers before routing
 - **Status:** locked
@@ -214,4 +216,26 @@
   should lead with remaining capacity rather than token counts so the name is not read as a promise about units.
 - **Applies to:** Product naming, bundle identity, repository naming, domains, storefront metadata, public assets, and
   marketing copy.
+
+## PD-018 · Ship TokenReserve as a direct download, not on the Mac App Store
+- **Status:** locked
+- **Locked:** 2026-08-06
+- **Decision:** TokenReserve is distributed as a notarized direct download from its own site, updated in place by
+  Sparkle. The Mac App Store is a durable non-goal for launch: no architecture, entitlement, or provider decision may
+  be bent toward sandbox eligibility, and no App Store Connect record is created. Revisiting it later means an
+  additional cut-down store build alongside the direct one, never a redesign of the direct product.
+- **Why:** App Sandbox is mandatory for Mac App Store distribution, and the product's entire acquisition layer depends
+  on exactly what the sandbox forbids — reading other applications' credential files and account homes, other
+  applications' Keychain items, browser cookie databases, and launching their command-line tools. Sandboxed, Cursor and
+  Grok have no known path to their numbers at all, and the rest degrade to the user pasting credentials by hand, which
+  deletes the zero-setup promise that is the product. Review Guideline 5.2.2 additionally places a human reviewer in
+  front of every update to a mechanism built on undocumented provider endpoints, so a mid-life rejection could strand
+  paying customers.
+- **Supersedes:** PD-011's App Store channel and PD-012's App Store release-architecture scope. Both entries keep every
+  other decision they carry.
+- **Residual risk:** Choosing direct distribution removes the reviewer, not the provider terms. Reading another
+  application's stored credentials may violate a provider's terms of use on any channel; that question is open and is
+  not resolved by this decision.
+- **Applies to:** Distribution, packaging, entitlements, provider acquisition architecture, the updater, payment and
+  licensing, and all storefront work.
 
