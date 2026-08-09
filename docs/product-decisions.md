@@ -239,3 +239,23 @@
 - **Applies to:** Distribution, packaging, entitlements, provider acquisition architecture, the updater, payment and
   licensing, and all storefront work.
 
+
+## PD-019 · Return the personal app to plain CodexBar and park the standalone
+- **Status:** locked
+- **Locked:** 2026-08-09
+- **Decision:** The installed personal app is plain CodexBar again: `/Applications/CodexBar.app`, bundle identifier
+  `com.pxl.codexbar`, display name CodexBar. The installer retires the QuotaRoom bundle and its login item and
+  migrates its settings domain once. The TokenReserve standalone application is parked, not revived: its installed
+  stand-in is uninstalled, its repository is kept intact outside the active portfolio, and no standalone work is
+  scheduled. This fork stops being a sellable product and leaves the Side Projects portfolio; it continues as the
+  user's personal tool whose one deliberate UI divergence from upstream is the 420-point account-card overview
+  (PD-009) and the merged status item, both kept exactly as shipped.
+- **Why:** The user chose the working tool over the productization arc. The overview already shows every account at a
+  glance — the view he asked to keep — and the standalone rewrite was a second codebase that added no daily value
+  while the fork stayed installed. A personalized fork of an MIT upstream is a tool, not a product, so it does not
+  belong in the sellable portfolio.
+- **Applies to:** App identity, packaging and installation, distribution ambitions, repository location, portfolio
+  membership, and the scope of future UI work.
+- **Supersedes:** PD-010's QuotaRoom install identity (the separate-app boundary and license-notice duties carry
+  over to the CodexBar identity). Parks PD-012's standalone replacement and PD-017/PD-018's TokenReserve storefront
+  and channel work — those decisions stay recorded and become binding again only if the standalone is revived.

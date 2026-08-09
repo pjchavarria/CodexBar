@@ -402,19 +402,19 @@ struct KeychainCacheStoreTests {
     @Test
     func `cache service uses the configured app identity`() {
         let service = KeychainCacheStore.configuredCacheServiceName(
-            infoDictionary: [KeychainCacheStore.cacheServiceInfoKey: "com.pxl.quotaroom.cache"],
-            bundleURL: URL(fileURLWithPath: "/Applications/QuotaRoom.app"),
+            infoDictionary: [KeychainCacheStore.cacheServiceInfoKey: "com.pxl.codexbar.cache"],
+            bundleURL: URL(fileURLWithPath: "/Applications/CodexBar.app"),
             executableURL: nil,
             readPropertyList: { _ in nil })
 
-        #expect(service == "com.pxl.quotaroom.cache")
+        #expect(service == "com.pxl.codexbar.cache")
     }
 
     @Test
     func `bundled CLI helper inherits the containing app cache service`() throws {
-        let helper = URL(fileURLWithPath: "/Applications/QuotaRoom.app/Contents/Helpers/CodexBarCLI")
+        let helper = URL(fileURLWithPath: "/Applications/CodexBar.app/Contents/Helpers/CodexBarCLI")
         let propertyList = try PropertyListSerialization.data(
-            fromPropertyList: [KeychainCacheStore.cacheServiceInfoKey: "com.pxl.quotaroom.cache"],
+            fromPropertyList: [KeychainCacheStore.cacheServiceInfoKey: "com.pxl.codexbar.cache"],
             format: .xml,
             options: 0)
         let service = KeychainCacheStore.configuredCacheServiceName(
@@ -422,14 +422,14 @@ struct KeychainCacheStoreTests {
             bundleURL: URL(fileURLWithPath: "/usr/local/bin"),
             executableURL: helper,
             readPropertyList: { url in
-                #expect(url.path == "/Applications/QuotaRoom.app/Contents/Info.plist")
+                #expect(url.path == "/Applications/CodexBar.app/Contents/Info.plist")
                 guard let value = try? PropertyListSerialization.propertyList(from: propertyList, format: nil) else {
                     return nil
                 }
                 return value as? [String: Any]
             })
 
-        #expect(service == "com.pxl.quotaroom.cache")
+        #expect(service == "com.pxl.codexbar.cache")
     }
 
     @Test

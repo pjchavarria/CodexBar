@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Package and install the current personalized app alongside upstream CodexBar.
+# Package and install the personal CodexBar app, replacing the retired QuotaRoom bundle.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${CODEXBAR_PERSONAL_ENV_FILE:-$ROOT/.codexbar-personal.env}"
 SOURCE_DOMAIN="${CODEXBAR_PERSONAL_SOURCE_DOMAIN:-}"
-BUNDLE_ID="${CODEXBAR_PERSONAL_BUNDLE_ID:-com.pxl.quotaroom}"
-DISPLAY_NAME="${CODEXBAR_PERSONAL_DISPLAY_NAME:-QuotaRoom}"
-APP_BUNDLE_NAME="${CODEXBAR_PERSONAL_APP_BUNDLE_NAME:-QuotaRoom.app}"
-TARGET_APP="${CODEXBAR_PERSONAL_INSTALL_PATH:-/Applications/QuotaRoom.app}"
+BUNDLE_ID="${CODEXBAR_PERSONAL_BUNDLE_ID:-com.pxl.codexbar}"
+DISPLAY_NAME="${CODEXBAR_PERSONAL_DISPLAY_NAME:-CodexBar}"
+APP_BUNDLE_NAME="${CODEXBAR_PERSONAL_APP_BUNDLE_NAME:-CodexBar.app}"
+TARGET_APP="${CODEXBAR_PERSONAL_INSTALL_PATH:-/Applications/CodexBar.app}"
 MIGRATION_KEY="CodexBarPersonalSettingsMigrationVersion"
 MIGRATION_VERSION=1
 DEFAULTS_BIN="${DEFAULTS_BIN:-/usr/bin/defaults}"
@@ -22,11 +22,10 @@ SFLTOOL_TIMEOUT_TICKS="${SFLTOOL_TIMEOUT_TICKS:-50}"
 SFLTOOL_TIMEOUT_DELAY="${SFLTOOL_TIMEOUT_DELAY:-0.1}"
 SFLTOOL_KILL_GRACE_DELAY="${SFLTOOL_KILL_GRACE_DELAY:-0.2}"
 LEGACY_UNREGISTER_DELAY="${CODEXBAR_PERSONAL_LEGACY_UNREGISTER_DELAY:-3}"
+LAUNCH_STABILITY_DELAY="${CODEXBAR_PERSONAL_LAUNCH_STABILITY_DELAY:-1}"
 MIN_FREE_KB="${CODEXBAR_PERSONAL_MIN_FREE_KB:-6291456}"
-UPSTREAM_APP="/Applications/CodexBar.app"
-LEGACY_PERSONAL_DOMAIN="com.pxl.codexbar.personal"
-LEGACY_PERSONAL_APP="${CODEXBAR_PERSONAL_LEGACY_APP_PATH:-/Applications/CodexBar Personal.app}"
-UPSTREAM_WAS_RUNNING=0
+LEGACY_PERSONAL_DOMAIN="com.pxl.quotaroom"
+LEGACY_PERSONAL_APP="${CODEXBAR_PERSONAL_LEGACY_APP_PATH:-/Applications/QuotaRoom.app}"
 PERSONAL_WAS_RUNNING=0
 INSTALL_TRANSACTION_DIR=""
 
@@ -82,7 +81,7 @@ check_disk_headroom() {
   [[ "$available_kb" =~ ^[0-9]+$ ]] || fail "Could not determine free disk space"
   [[ "$MIN_FREE_KB" =~ ^[0-9]+$ ]] || fail "CODEXBAR_PERSONAL_MIN_FREE_KB must be an integer"
   if [[ "$available_kb" -lt "$MIN_FREE_KB" ]]; then
-    fail "QuotaRoom requires 6 GiB free before a release build; only $((available_kb / 1024)) MiB is available"
+    fail "CodexBar requires 6 GiB free before a release build; only $((available_kb / 1024)) MiB is available"
   fi
 }
 
@@ -156,17 +155,13 @@ migrate_settings_once() (
 )
 
 stop_installed_apps() {
-  if "$PGREP_BIN" -f '^/Applications/CodexBar\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1; then
-    UPSTREAM_WAS_RUNNING=1
-  fi
-  if "$PGREP_BIN" -f '^/Applications/QuotaRoom\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1 \
-    || "$PGREP_BIN" -f '^/Applications/CodexBar Personal\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1
+  if "$PGREP_BIN" -f '^/Applications/CodexBar\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1 \
+    || "$PGREP_BIN" -f '^/Applications/QuotaRoom\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1
   then
     PERSONAL_WAS_RUNNING=1
   fi
   "$PKILL_BIN" -f '^/Applications/CodexBar\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1 || true
   "$PKILL_BIN" -f '^/Applications/QuotaRoom\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1 || true
-  "$PKILL_BIN" -f '^/Applications/CodexBar Personal\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1 || true
 }
 
 run_bounded_sfltool_dump() {
@@ -205,7 +200,7 @@ legacy_personal_login_item_is_enabled() {
     return 3
   fi
   if awk 'BEGIN { RS = "" }
-    /Bundle Identifier: com\.pxl\.codexbar\.personal/ && /Disposition: \[enabled/ { found = 1 }
+    /Bundle Identifier: com\.pxl\.quotaroom/ && /Disposition: \[enabled/ { found = 1 }
     END { exit found ? 0 : 1 }' "$dump"
   then
     rm -f "$dump"
@@ -224,16 +219,16 @@ disable_legacy_personal_login_item() {
   # background with its persisted setting off, wait for that startup path, then stop it.
   open_app "$LEGACY_PERSONAL_APP"
   sleep "$LEGACY_UNREGISTER_DELAY"
-  "$PKILL_BIN" -f '^/Applications/CodexBar Personal\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1 || true
+  "$PKILL_BIN" -f '^/Applications/QuotaRoom\.app/Contents/MacOS/CodexBar$' >/dev/null 2>&1 || true
 
   local inspection_status=0
   legacy_personal_login_item_is_enabled || inspection_status=$?
   case "$inspection_status" in
     0)
-      warn "CodexBar Personal remained enabled after unregister; removing the obsolete app so it cannot relaunch"
+      warn "QuotaRoom remained enabled after unregister; removing the obsolete app so it cannot relaunch"
       ;;
     1)
-      log "Disabled the CodexBar Personal login item."
+      log "Disabled the QuotaRoom login item."
       ;;
     2)
       warn "macOS timed out verifying the old login item; removing the obsolete app so it cannot relaunch"
@@ -249,8 +244,8 @@ validate_legacy_personal_app_path() {
   local parent resolved_parent
   [[ "$LEGACY_PERSONAL_APP" == /* ]] \
     || fail "Legacy app path must be absolute"
-  [[ "$(basename "$LEGACY_PERSONAL_APP")" == "CodexBar Personal.app" ]] \
-    || fail "Legacy app path must end in CodexBar Personal.app"
+  [[ "$(basename "$LEGACY_PERSONAL_APP")" == "QuotaRoom.app" ]] \
+    || fail "Legacy app path must end in QuotaRoom.app"
   parent="$(dirname "$LEGACY_PERSONAL_APP")"
   resolved_parent="$(cd "$parent" && pwd -P)" \
     || fail "Could not resolve the legacy app parent directory"
@@ -264,8 +259,8 @@ remove_legacy_personal_app() {
   validate_legacy_personal_app_path
   rm -rf "$LEGACY_PERSONAL_APP"
   [[ ! -e "$LEGACY_PERSONAL_APP" ]] \
-    || fail "Could not remove the obsolete CodexBar Personal bundle"
-  log "Removed the obsolete CodexBar Personal app."
+    || fail "Could not remove the obsolete QuotaRoom bundle"
+  log "Removed the obsolete QuotaRoom app."
 }
 
 validate_install_transaction_dir() {
@@ -359,10 +354,12 @@ restore_running_app_on_failure() {
       rm -rf "$INSTALL_TRANSACTION_DIR" || true
       INSTALL_TRANSACTION_DIR=""
     fi
-    if [[ "$PERSONAL_WAS_RUNNING" == "1" && -e "$TARGET_APP" ]]; then
-      open_app "$TARGET_APP" || true
-    elif [[ "$UPSTREAM_WAS_RUNNING" == "1" && -e "$UPSTREAM_APP" ]]; then
-      open_app "$UPSTREAM_APP" || true
+    if [[ "$PERSONAL_WAS_RUNNING" == "1" ]]; then
+      if [[ -e "$TARGET_APP" ]]; then
+        open_app "$TARGET_APP" || true
+      elif [[ -e "$LEGACY_PERSONAL_APP" ]]; then
+        open_app "$LEGACY_PERSONAL_APP" || true
+      fi
     fi
   fi
   exit "$status"
@@ -397,15 +394,22 @@ install_packaged_app() {
 launch_and_verify() {
   open_app "$TARGET_APP"
   local expected="$TARGET_APP/Contents/MacOS/CodexBar"
-  local attempt
+  local attempt stable
   for attempt in 1 2 3 4 5 6 7 8 9 10; do
     if "$PGREP_BIN" -f "^${expected}$" >/dev/null 2>&1; then
-      log "QuotaRoom is running."
+      # One sighting is not proof it stays running: the legacy bundle is deleted after this
+      # returns, so require the process to survive several consecutive polls first.
+      for stable in 1 2 3; do
+        sleep "$LAUNCH_STABILITY_DELAY"
+        "$PGREP_BIN" -f "^${expected}$" >/dev/null 2>&1 \
+          || fail "CodexBar exited right after launch"
+      done
+      log "CodexBar is running."
       return 0
     fi
     sleep 1
   done
-  fail "QuotaRoom did not stay running"
+  fail "CodexBar did not stay running"
 }
 
 main() {
@@ -463,10 +467,14 @@ main() {
   [[ "$(defaults read "$packaged/Contents/Info.plist" SUEnableAutomaticChecks)" == "0" ]] \
     || fail "Personal app update checks are not disabled"
   install_packaged_app "$packaged"
-  disable_legacy_personal_login_item
+  # The legacy QuotaRoom bundle stays untouched until the replacement has proven it stays running:
+  # a launch failure must leave the user with the app they had, and the failure trap relaunches it.
   launch_and_verify
   discard_install_transaction
   trap - EXIT
+  # Only a verified, running CodexBar retires the QuotaRoom login item and bundle. A failure past
+  # this point exits loudly but never tears down the healthy install above.
+  disable_legacy_personal_login_item
 }
 
 if [[ "${CODEXBAR_PERSONAL_SOURCE_ONLY:-0}" != "1" ]]; then

@@ -1,26 +1,27 @@
-_Status: shipped reference · 2026-08-06_
+_Status: shipped · 2026-08-09_
 
 # Compact Multi-Account Overview
 
 ## Resume here
 
-Keep the approved Route B compact overview working at 420 points in the currently installed fork while the standalone
-replacement is built. Use this surface as the behavior and visual oracle; do not add upstream features or turn the fork
-into the replacement architecture.
+Keep the approved Route B compact overview working at 420 points in the installed personal app. Since PD-019 the fork
+is the personal surface again — plain CodexBar identity, no product ambitions — and the parked TokenReserve standalone
+is no longer being built. The overview is the one deliberate UI divergence from upstream; keep it, and keep the rest
+of the app close to stock.
 
 ## Current reality
 
-- The repository is the temporary implementation reference for the standalone replacement; upstream merges are no
-  longer the product strategy.
+- The repository is the user's personal tool. The TokenReserve standalone replacement is parked (PD-019); upstream
+  feature merges remain out of scope.
 - CodexBar already owns account discovery, account-scoped quota snapshots, inline usage dashboards, refresh actions,
   settings, and provider submenus.
 - The fork adds a presentation seam, a compact account-card grid, and account-to-card projection. It does not add another
   credential store, fetcher, parser, or chart data source.
-- `Scripts/install_personal_app.sh` packages and installs `/Applications/QuotaRoom.app` with separate bundle and
-  Keychain-cache identities, imports upstream settings once, uses the existing shared account stores, and leaves
-  upstream CodexBar intact.
+- `Scripts/install_personal_app.sh` packages and installs `/Applications/CodexBar.app` (bundle `com.pxl.codexbar`)
+  with its own Keychain-cache identity, migrates the QuotaRoom settings domain once, and uses the existing shared
+  account stores.
   The personal package disables Sparkle updates, the widget, and iCloud app-group sync. It unregisters and removes the
-  legacy CodexBar Personal app, and retains a replaced bundle only inside the active install transaction.
+  legacy QuotaRoom app, and retains a replaced bundle only inside the active install transaction.
 
 ## Direction
 
@@ -63,20 +64,18 @@ stay legal and migrate.
 
 ## Next checkpoint
 
-Reproduce the fixture-backed card grid and chart in the scaffolded TokenReserve repository. Public distribution
-continues through the [TokenReserve standalone release brief](standalone-release.md); do not weaken the
-complete-provider promise for any packaging convenience.
+None scheduled. The overview is shipped and installed; future work is maintenance of this surface unless the user
+reopens the parked standalone ([TokenReserve standalone release brief](standalone-release.md)).
 
 ## Product identity
 
-The account-card mock is approved and implemented. QuotaRoom is retired and the sellable name is TokenReserve
-(PD-017), distributed as a direct download (PD-018). The full-color open-frame icon and existing dynamic status-item
-visualization are provisional until that name is applied. Domain registry availability is not trademark clearance or
-registrar purchase proof.
+The installed personal app is plain CodexBar (PD-019): `/Applications/CodexBar.app`, bundle `com.pxl.codexbar`. It is
+not a sellable product; QuotaRoom and the TokenReserve storefront arc are retired/parked history recorded in
+`product-decisions.md` (PD-010 through PD-018).
 
-The installed QuotaRoom audit confirms two healthy managed Codex accounts, two fresh claude-swap accounts, healthy
-Grok and Antigravity usage, and healthy Cursor quota and cost/history paths. The installed QuotaRoom helper returned
-valid non-error Cursor usage and cost data twice after the bundle-specific Keychain cache repair.
+The 2026-08-06 installed audit (then under the QuotaRoom identity) confirmed two healthy managed Codex accounts, two
+fresh claude-swap accounts, healthy Grok and Antigravity usage, and healthy Cursor quota and cost/history paths after
+the bundle-specific Keychain cache repair.
 
 ## Direction log
 
@@ -120,4 +119,8 @@ valid non-error Cursor usage and cost data twice after the bundle-specific Keych
   sandbox compatibility proof for the complete provider set, not a reduced-provider upload. **Superseded the same day
   by PD-018:** the channel is a direct download and the sandbox proof is retired.
 - 2026-08-06: The user rejected QuotaRoom, replaced the fork strategy with a minimal standalone app in a new repository,
-  and removed persistent rollback launchables. This document is now the behavior oracle for that replacement.
+  and removed persistent rollback launchables. This document became the behavior oracle for that replacement.
+- 2026-08-09: The user reversed the productization arc (PD-019): the TokenReserve stand-in was uninstalled and its
+  repository parked, the installed app returned to plain CodexBar (`com.pxl.codexbar` at `/Applications/CodexBar.app`),
+  and the fork left the sellable portfolio. He kept the all-accounts-at-a-glance overview and the merged status item
+  exactly as shipped; the overview is the one intended UI divergence from upstream.

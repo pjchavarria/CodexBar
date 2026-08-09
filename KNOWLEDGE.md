@@ -182,7 +182,8 @@
 - **Revisit when:** Apple provides a supported API for one bundle to unregister another bundle's main-app login item.
 
 ## KB-012 · Use the fork as an oracle, not the replacement architecture
-- **Status:** active
+- **Status:** superseded — PD-019 (2026-08-09) parked the standalone; the fork is the personal surface again and there
+  is no replacement to migrate into. The dependency-closure findings below stay valid if the standalone is revived.
 - **Last verified:** 2026-08-06
 - **Use when:** Migrating the approved account-card product into its standalone application.
 - **Knowledge:** Start the replacement in a new repository and admit reused files only after their dependency closure is

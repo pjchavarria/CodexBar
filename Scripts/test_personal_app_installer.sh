@@ -7,9 +7,10 @@ TARGET_DOMAIN="CodexBarPersonalMigrationTargetTests-$RANDOM-$$"
 FIXTURE="$(mktemp "${TMPDIR:-/tmp}/codexbar-personal-settings-fixture.XXXXXX")"
 LEGACY_TEST_ROOT=""
 RECOVERY_TEST_ROOT=""
+RENAME_FAIL_ROOT=""
 TIMEOUT_LOG=""
 SFLTOOL_PID_FILE=""
-trap 'defaults delete "$SOURCE_DOMAIN" >/dev/null 2>&1 || true; defaults delete "$TARGET_DOMAIN" >/dev/null 2>&1 || true; rm -f "$FIXTURE" "$TIMEOUT_LOG" "$SFLTOOL_PID_FILE"; [[ -z "$LEGACY_TEST_ROOT" ]] || rm -rf "$LEGACY_TEST_ROOT"; [[ -z "$RECOVERY_TEST_ROOT" ]] || rm -rf "$RECOVERY_TEST_ROOT"' EXIT
+trap 'defaults delete "$SOURCE_DOMAIN" >/dev/null 2>&1 || true; defaults delete "$TARGET_DOMAIN" >/dev/null 2>&1 || true; rm -f "$FIXTURE" "$TIMEOUT_LOG" "$SFLTOOL_PID_FILE"; [[ -z "$LEGACY_TEST_ROOT" ]] || rm -rf "$LEGACY_TEST_ROOT"; [[ -z "$RECOVERY_TEST_ROOT" ]] || rm -rf "$RECOVERY_TEST_ROOT"; [[ -z "$RENAME_FAIL_ROOT" ]] || rm -rf "$RENAME_FAIL_ROOT"' EXIT
 
 cat > "$FIXTURE" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -69,12 +70,12 @@ then
   exit 1
 fi
 
-if ! rg -q 'BUNDLE_ID="\$\{CODEXBAR_PERSONAL_BUNDLE_ID:-com\.pxl\.quotaroom\}"' \
+if ! rg -q 'BUNDLE_ID="\$\{CODEXBAR_PERSONAL_BUNDLE_ID:-com\.pxl\.codexbar\}"' \
   "$ROOT/Scripts/install_personal_app.sh" \
-  || ! rg -q 'TARGET_APP="\$\{CODEXBAR_PERSONAL_INSTALL_PATH:-/Applications/QuotaRoom\.app\}"' \
+  || ! rg -q 'TARGET_APP="\$\{CODEXBAR_PERSONAL_INSTALL_PATH:-/Applications/CodexBar\.app\}"' \
     "$ROOT/Scripts/install_personal_app.sh"
 then
-  echo "Personal app installer does not default to the locked QuotaRoom identity" >&2
+  echo "Personal app installer does not default to the plain CodexBar identity" >&2
   exit 1
 fi
 
@@ -88,7 +89,7 @@ then
 fi
 [[ -d "$LEGACY_TEST_ROOT/not-the-legacy-app" ]]
 
-LEGACY_APP="$LEGACY_TEST_ROOT/CodexBar Personal.app"
+LEGACY_APP="$LEGACY_TEST_ROOT/QuotaRoom.app"
 STATE_FILE="$LEGACY_TEST_ROOT/state"
 ACTION_LOG="$LEGACY_TEST_ROOT/actions.log"
 mkdir -p "$LEGACY_APP/Contents/MacOS"
@@ -121,9 +122,9 @@ fi
 if [[ "$(cat "$STATE_FILE")" == "enabled" ]]; then
   cat <<'DUMP'
 #1:
-  Name: CodexBar Personal
+  Name: QuotaRoom
   Disposition: [enabled, allowed, notified] (0xb)
-  Bundle Identifier: com.pxl.codexbar.personal
+  Bundle Identifier: com.pxl.quotaroom
 DUMP
 else
   printf 'Items:\n'
@@ -142,7 +143,7 @@ CODEXBAR_PERSONAL_LEGACY_APP_PATH="$LEGACY_APP" \
 
 [[ "$(cat "$STATE_FILE")" == "disabled" ]]
 [[ ! -e "$LEGACY_APP" ]]
-rg -q '^defaults write com\.pxl\.codexbar\.personal launchAtLogin -bool false$' "$ACTION_LOG"
+rg -q '^defaults write com\.pxl\.quotaroom launchAtLogin -bool false$' "$ACTION_LOG"
 rg -Fq "open -g -n $LEGACY_APP" "$ACTION_LOG"
 
 mkdir -p "$LEGACY_APP/Contents/MacOS"
@@ -171,15 +172,15 @@ fi
 if rg -Fq 'LEGACY_PERSONAL_ROLLBACK_ARCHIVE' "$ROOT/Scripts/install_personal_app.sh" \
   || rg -Fq '${TARGET_APP%.app}.previous.app' "$ROOT/Scripts/install_personal_app.sh" \
   || rg -Fq '${TARGET_APP%.app}.failed-' "$ROOT/Scripts/install_personal_app.sh" \
-  || rg -Fq '.QuotaRoom.installing.app' "$ROOT/Scripts/install_personal_app.sh"
+  || rg -Fq '.CodexBar.installing.app' "$ROOT/Scripts/install_personal_app.sh"
 then
   echo "Personal app installer still creates a persistent rollback launchable" >&2
   exit 1
 fi
 
 RECOVERY_TEST_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/codexbar-personal-recovery.XXXXXX")"
-RECOVERY_TARGET="$RECOVERY_TEST_ROOT/QuotaRoom.app"
-RECOVERY_TRANSACTION="$(mktemp -d "$RECOVERY_TEST_ROOT/.QuotaRoom.install.XXXXXX")"
+RECOVERY_TARGET="$RECOVERY_TEST_ROOT/CodexBar.app"
+RECOVERY_TRANSACTION="$(mktemp -d "$RECOVERY_TEST_ROOT/.CodexBar.install.XXXXXX")"
 mkdir -p "$RECOVERY_TARGET/Contents/MacOS"
 if CODEXBAR_PERSONAL_SOURCE_ONLY=1 CODEXBAR_PERSONAL_INSTALL_PATH="$RECOVERY_TARGET" \
   bash -c 'source "$1"; INSTALL_TRANSACTION_DIR="$2"; trap restore_running_app_on_failure EXIT; false' \
@@ -191,7 +192,7 @@ fi
 [[ ! -e "$RECOVERY_TARGET" ]]
 [[ ! -e "$RECOVERY_TRANSACTION" ]]
 
-RECOVERY_TRANSACTION="$(mktemp -d "$RECOVERY_TEST_ROOT/.QuotaRoom.install.XXXXXX")"
+RECOVERY_TRANSACTION="$(mktemp -d "$RECOVERY_TEST_ROOT/.CodexBar.install.XXXXXX")"
 mkdir -p "$RECOVERY_TARGET/Contents/MacOS" "$RECOVERY_TRANSACTION/previous.app/Contents/MacOS"
 printf 'new\n' >"$RECOVERY_TARGET/version"
 printf 'old\n' >"$RECOVERY_TRANSACTION/previous.app/version"
@@ -206,17 +207,74 @@ fi
 [[ ! -e "$RECOVERY_TRANSACTION" ]]
 
 mkdir -p \
-  "$RECOVERY_TEST_ROOT/QuotaRoom.previous.app" \
-  "$RECOVERY_TEST_ROOT/.QuotaRoom.installing.app" \
-  "$RECOVERY_TEST_ROOT/QuotaRoom.failed-123.app" \
-  "$RECOVERY_TEST_ROOT/.QuotaRoom.install.STALE"
+  "$RECOVERY_TEST_ROOT/CodexBar.previous.app" \
+  "$RECOVERY_TEST_ROOT/.CodexBar.installing.app" \
+  "$RECOVERY_TEST_ROOT/CodexBar.failed-123.app" \
+  "$RECOVERY_TEST_ROOT/.CodexBar.install.STALE"
 CODEXBAR_PERSONAL_SOURCE_ONLY=1 CODEXBAR_PERSONAL_INSTALL_PATH="$RECOVERY_TARGET" \
   bash -c 'source "$1"; remove_obsolete_install_artifacts' \
     installer-test "$ROOT/Scripts/install_personal_app.sh"
 [[ -e "$RECOVERY_TARGET" ]]
-[[ ! -e "$RECOVERY_TEST_ROOT/QuotaRoom.previous.app" ]]
-[[ ! -e "$RECOVERY_TEST_ROOT/.QuotaRoom.installing.app" ]]
-[[ ! -e "$RECOVERY_TEST_ROOT/QuotaRoom.failed-123.app" ]]
-[[ ! -e "$RECOVERY_TEST_ROOT/.QuotaRoom.install.STALE" ]]
+[[ ! -e "$RECOVERY_TEST_ROOT/CodexBar.previous.app" ]]
+[[ ! -e "$RECOVERY_TEST_ROOT/.CodexBar.installing.app" ]]
+[[ ! -e "$RECOVERY_TEST_ROOT/CodexBar.failed-123.app" ]]
+[[ ! -e "$RECOVERY_TEST_ROOT/.CodexBar.install.STALE" ]]
+
+if [[ "$(awk '/install_packaged_app "\$packaged"/,0' "$ROOT/Scripts/install_personal_app.sh" \
+  | grep -oE 'launch_and_verify|disable_legacy_personal_login_item' | head -2 | tr '\n' ' ')" \
+  != "launch_and_verify disable_legacy_personal_login_item " ]]
+then
+  echo "Installer retires the legacy app before the replacement is verified" >&2
+  exit 1
+fi
+
+RENAME_FAIL_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/codexbar-personal-rename-fail.XXXXXX")"
+RENAME_TARGET="$RENAME_FAIL_ROOT/CodexBar.app"
+RENAME_LEGACY="$RENAME_FAIL_ROOT/QuotaRoom.app"
+RENAME_LOG="$RENAME_FAIL_ROOT/actions.log"
+RENAME_TRANSACTION="$(mktemp -d "$RENAME_FAIL_ROOT/.CodexBar.install.XXXXXX")"
+mkdir -p "$RENAME_TARGET/Contents/MacOS" "$RENAME_LEGACY/Contents/MacOS"
+cat >"$RENAME_FAIL_ROOT/open" <<'SH'
+#!/usr/bin/env bash
+printf 'open %s\n' "$*" >>"$ACTION_LOG"
+SH
+chmod +x "$RENAME_FAIL_ROOT/open"
+if ACTION_LOG="$RENAME_LOG" OPEN_BIN="$RENAME_FAIL_ROOT/open" \
+  CODEXBAR_PERSONAL_SOURCE_ONLY=1 \
+  CODEXBAR_PERSONAL_INSTALL_PATH="$RENAME_TARGET" \
+  CODEXBAR_PERSONAL_LEGACY_APP_PATH="$RENAME_LEGACY" \
+  bash -c 'source "$1"; INSTALL_TRANSACTION_DIR="$2"; PERSONAL_WAS_RUNNING=1; trap restore_running_app_on_failure EXIT; false' \
+    installer-test "$ROOT/Scripts/install_personal_app.sh" "$RENAME_TRANSACTION"
+then
+  echo "Failed first rename unexpectedly reported success" >&2
+  exit 1
+fi
+[[ ! -e "$RENAME_TARGET" ]]
+[[ -d "$RENAME_LEGACY" ]]
+[[ ! -e "$RENAME_TRANSACTION" ]]
+rg -Fq "open -g -n $RENAME_LEGACY" "$RENAME_LOG"
+
+FLAP_STATE="$RENAME_FAIL_ROOT/pgrep-count"
+rm -f "$FLAP_STATE"
+cat >"$RENAME_FAIL_ROOT/pgrep-flap" <<'SH'
+#!/usr/bin/env bash
+n="$(cat "$FLAP_STATE" 2>/dev/null || printf 0)"
+n=$((n + 1))
+printf '%s\n' "$n" >"$FLAP_STATE"
+[[ "$n" -eq 1 ]] && exit 0
+exit 1
+SH
+chmod +x "$RENAME_FAIL_ROOT/pgrep-flap"
+if ACTION_LOG="$RENAME_LOG" FLAP_STATE="$FLAP_STATE" \
+  OPEN_BIN="$RENAME_FAIL_ROOT/open" PGREP_BIN="$RENAME_FAIL_ROOT/pgrep-flap" \
+  CODEXBAR_PERSONAL_SOURCE_ONLY=1 \
+  CODEXBAR_PERSONAL_INSTALL_PATH="$RENAME_FAIL_ROOT/CodexBar.app" \
+  CODEXBAR_PERSONAL_LAUNCH_STABILITY_DELAY=0.01 \
+  bash -c 'source "$1"; launch_and_verify' installer-test "$ROOT/Scripts/install_personal_app.sh" >/dev/null 2>&1
+then
+  echo "A process seen once and then gone unexpectedly passed launch verification" >&2
+  exit 1
+fi
+[[ "$(cat "$FLAP_STATE")" == "2" ]]
 
 echo "Personal app installer tests passed."

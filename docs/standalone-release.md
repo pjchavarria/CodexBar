@@ -1,13 +1,16 @@
-_Status: building · 2026-08-06_
+_Status: parked by PD-019 · 2026-08-09_
 
 # TokenReserve — the standalone release
 
 ## Resume here
 
-The name is locked (PD-017) and the channel is locked (PD-018). Next: scaffold the TokenReserve repository as an
-unsandboxed direct-download Mac app and land one vertical slice — menu-bar shell, fixture-backed account cards, and the
-provider-colored aggregate chart — before any live credential is read. The installed fork stays running only as the
-behavior oracle while the replacement is incomplete.
+**Parked (PD-019, 2026-08-09):** the user uninstalled the TokenReserve stand-in, returned the installed app to plain
+CodexBar, and stopped the standalone push; the repository is kept intact outside the active portfolio. Everything
+below is the state of the initiative at the moment it was parked, preserved for a future revival.
+
+The name is locked (PD-017) and the channel is locked (PD-018). The next step was: scaffold the TokenReserve
+repository as an unsandboxed direct-download Mac app and land one vertical slice — menu-bar shell, fixture-backed
+account cards, and the provider-colored aggregate chart — before any live credential is read.
 
 ## What this is
 

@@ -14,7 +14,7 @@ typealias WindowImageFunction = @convention(c) (
 
 let arguments = CommandLine.arguments
 guard arguments.count == 2 else {
-    FileHandle.standardError.write(Data("Usage: capture_quotaroom_menu.swift /absolute/output.png\n".utf8))
+    FileHandle.standardError.write(Data("Usage: capture_personal_menu.swift /absolute/output.png\n".utf8))
     exit(2)
 }
 
@@ -30,7 +30,7 @@ guard outputURL.pathExtension.lowercased() == "png" else {
 
 let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
 let menuWindows = windows.compactMap { window -> (id: CGWindowID, bounds: CGRect)? in
-    guard window[kCGWindowOwnerName as String] as? String == "QuotaRoom",
+    guard window[kCGWindowOwnerName as String] as? String == "CodexBar",
           window[kCGWindowLayer as String] as? Int == 101,
           let number = window[kCGWindowNumber as String] as? UInt32,
           let boundsDictionary = window[kCGWindowBounds as String] as? [String: Any],
@@ -41,7 +41,7 @@ let menuWindows = windows.compactMap { window -> (id: CGWindowID, bounds: CGRect
 
 guard menuWindows.count == 1, let menuWindow = menuWindows.first else {
     FileHandle.standardError.write(
-        Data("Expected one open QuotaRoom status menu; found \(menuWindows.count).\n".utf8))
+        Data("Expected one open CodexBar status menu; found \(menuWindows.count).\n".utf8))
     exit(1)
 }
 
@@ -56,7 +56,7 @@ guard let unmanagedImage = createWindowImage(
     menuWindow.id,
     [.boundsIgnoreFraming])
 else {
-    FileHandle.standardError.write(Data("Could not capture the QuotaRoom menu window.\n".utf8))
+    FileHandle.standardError.write(Data("Could not capture the CodexBar menu window.\n".utf8))
     exit(1)
 }
 
@@ -77,4 +77,4 @@ guard CGImageDestinationFinalize(destination) else {
 }
 try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: outputURL.path)
 
-print("Captured QuotaRoom menu \(image.width)x\(image.height) at \(outputURL.path)")
+print("Captured CodexBar menu \(image.width)x\(image.height) at \(outputURL.path)")

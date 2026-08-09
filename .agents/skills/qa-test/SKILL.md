@@ -11,7 +11,7 @@ Use for live provider testing, release smoke tests, menu verification, or debugg
 
 - Work from the CodexBar repo checkout.
 - Use `CodexBar.app/Contents/Helpers/CodexBarCLI` for pre-install development checks. For completion claims about the
-  installed personal fork, use `/Applications/QuotaRoom.app/Contents/Helpers/CodexBarCLI` or an explicit
+  installed personal fork, use `/Applications/CodexBar.app/Contents/Helpers/CodexBarCLI` or an explicit
   `CODEXBAR_CLI` override pointing to the installed application under test.
 - Do not use `CodexBar.app/Contents/MacOS/codexbar`; that is the app binary and may appear to hang as a CLI.
 - Never run broad `env`, `set`, or secret regex dumps.
@@ -53,7 +53,7 @@ Interpretation:
 - Bundle presence, code signature, process health, and matching binary hashes prove only that the intended build is
   installed. They do not prove the provider behavior the user asked to change.
 - After installation, set
-  `CODEXBAR_CLI="${CODEXBAR_CLI:-/Applications/QuotaRoom.app/Contents/Helpers/CodexBarCLI}"` and run that exact
+  `CODEXBAR_CLI="${CODEXBAR_CLI:-/Applications/CodexBar.app/Contents/Helpers/CodexBarCLI}"` and run that exact
   helper against every provider or account path changed in the task. For Codex account work, include
   `"$CODEXBAR_CLI" usage --provider codex --all-accounts --format json` and compare the returned account count, source,
   usage/error state, and identity-equality relationships with the expected account census. Do not mark the app verified
@@ -119,11 +119,11 @@ screencapture -x /tmp/codexbar-live-menu.png
 ```
 
 If Peekaboo is unavailable or `screencapture` returns a black frame, keep the user's current app frontmost, open the
-QuotaRoom status item through `System Events`, and capture only its live layer-101 window:
+CodexBar status item through `System Events`, and capture only its live layer-101 window:
 
 ```bash
 osascript -e 'tell application "System Events" to tell process "CodexBar" to click menu bar item 1 of menu bar 2'
-swift .agents/skills/qa-test/scripts/capture_quotaroom_menu.swift /tmp/quotaroom-live-menu.png
+swift .agents/skills/qa-test/scripts/capture_personal_menu.swift /tmp/codexbar-live-menu.png
 osascript -e 'tell application "System Events" to key code 53'
 ```
 
