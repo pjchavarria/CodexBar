@@ -197,9 +197,11 @@ public enum UsageFormatter {
             return self.localized("Updated %@h ago", String(wholeHours))
             #endif
         } else {
+            // Past 24 hours a bare clock time reads as today's; keep the day visible so a stale
+            // account is recognizable at a glance.
             return self.localized(
                 "Updated absolute %@",
-                date.formatted(.dateTime.hour().minute().locale(self.currentLocale())))
+                date.formatted(.dateTime.month(.abbreviated).day().hour().minute().locale(self.currentLocale())))
         }
     }
 

@@ -136,7 +136,12 @@ extension StatusItemController {
         width: CGFloat) -> NSMenuItem
     {
         self.makeMenuCardItem(
-            CompactOverviewAccountGridView(model: grid, width: width),
+            CompactOverviewAccountGridView(
+                model: grid,
+                width: width,
+                resolveLiveModel: { [weak self] in
+                    self?.resolveLiveCompactOverviewGridModel()
+                }),
             id: "compactOverviewAccountGrid",
             width: width,
             heightCacheScope: "compact-overview-account-grid",
@@ -144,6 +149,25 @@ extension StatusItemController {
             submenu: nil,
             containsInteractiveControls: false,
             usesGPUSelection: true)
+    }
+
+    /// Live counterpart of the menu-build path: re-derives the account grid from current store
+    /// state so the observed refresh monitor can surface completed refreshes in an open menu.
+    func resolveLiveCompactOverviewGridModel() -> CompactOverviewAccountGridModel? {
+        let enabledProviders = self.store.enabledProvidersForDisplay()
+        let usesCompactOverview = self.usesCompactOverview(enabledProviders: enabledProviders)
+        guard usesCompactOverview else { return nil }
+        let providerModels = self.personalizedOverviewProviders(enabledProviders)
+            .compactMap { provider -> CompactOverviewProviderCardModel? in
+                guard let model = self.menuCardModel(for: provider) else { return nil }
+                guard CodexBarPersonalization.includesOverviewProvider(
+                    isErrorOnly: model.isOverviewErrorOnly,
+                    usesCompactOverview: usesCompactOverview,
+                    hasKnownAccounts: self.hasKnownCompactOverviewAccounts(for: provider)) else { return nil }
+                return self.compactOverviewProviderCardModel(provider: provider, providerModel: model)
+            }
+        guard !providerModels.isEmpty else { return nil }
+        return CompactOverviewAccountGridModel(providerModels: providerModels)
     }
 
     func addCompactOverviewContent(

@@ -273,3 +273,23 @@
   the `/bin/bash` empty-artifacts regression in `Scripts/test_personal_app_installer.sh`,
   commit 205110bd (2026-08-09).
 - **Revisit when:** Scripts pin a modern bash via Homebrew, or macOS ships bash 4+.
+
+## KB-016 · Open root menus never rebuild; MenuCardRefreshMonitor is the only live channel
+
+- **Status:** active
+- **Last verified:** 2026-08-09
+- **Use when:** Adding anything time- or refresh-sensitive to a menu surface (timestamps, "Refreshing…"
+  states, live counters), or reviewing a claim that an open menu "updates on the next data tick".
+- **Knowledge:** While a root menu is open, `refreshOpenMenuIfNeeded` defers the parent rebuild
+  (`menuSession.deferParentRebuild(key)` and returns), so the store-observation → `invalidateMenus`
+  → smart-update reconcile path never reaches the open menu — it applies on reopen. The only channel
+  that updates an open menu live is `MenuCardRefreshMonitor` observed from inside the hosted SwiftUI
+  view (`@Environment(\.menuCardRefreshMonitor)`). Any view that swaps in live data must also keep the
+  cached NSMenu item height invariant: adopt a fresh model only when structurally compatible with the
+  baked one (same cards/metrics), as `CompactOverviewAccountGridModel.preferringLive` does.
+- **Why:** The refresh path looks complete when traced from the store side, so a reviewer finding of
+  "stale while open" was wrongly declined in this session; the deferral branch is easy to miss.
+- **Evidence:** `Sources/CodexBar/StatusItemController+MenuTracking.swift` (`refreshOpenMenuIfNeeded`),
+  `Sources/CodexBar/MenuCardRefreshMonitor.swift`, `Sources/CodexBar/CompactOverviewProviderCard.swift`
+  (`preferringLive`/`isStructurallyCompatible`), `Sources/CodexBar/MenuCardView.swift:353-357`.
+- **Revisit when:** Menu hosting moves off NSMenu or open-menu rebuilds become supported.

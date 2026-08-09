@@ -92,50 +92,8 @@ struct UsageMenuCardLayoutTests {
 
     @Test
     func `compact overview keeps the requested quota rows and readable two column width`() throws {
-        let dashboard = InlineUsageDashboardModel(
-            accessibilityLabel: "30 day usage",
-            valueStyle: .currencyUSD,
-            kpis: [
-                .init(title: "Today", value: "$12.40", emphasis: true),
-                .init(title: "30d", value: "$93.70", emphasis: false),
-                .init(title: "Latest tokens", value: "2.7B", emphasis: false),
-                .init(title: "30d tokens", value: "5B", emphasis: false),
-            ],
-            points: [
-                .init(id: "1", label: "Mon", value: 4, accessibilityValue: "Monday: $4"),
-                .init(id: "2", label: "Tue", value: 12, accessibilityValue: "Tuesday: $12"),
-            ],
-            detailLines: ["Top model: example", "Estimated from token usage"],
-            currencyCode: "USD",
-            costAggregation: .init(
-                currencyCode: "USD",
-                historyDays: 30,
-                todayCost: 12,
-                historyCost: 16,
-                latestTokens: 100,
-                historyTokens: 1000,
-                points: [
-                    .init(id: "1", label: "Mon", value: 4, accessibilityValue: "Monday: $4"),
-                    .init(id: "2", label: "Tue", value: 12, accessibilityValue: "Tuesday: $12"),
-                ]))
-        let claudeDashboard = InlineUsageDashboardModel(
-            accessibilityLabel: "30 day Claude usage",
-            valueStyle: .currencyUSD,
-            kpis: [],
-            points: [],
-            detailLines: [],
-            currencyCode: "USD",
-            costAggregation: .init(
-                currencyCode: "USD",
-                historyDays: 30,
-                todayCost: 7,
-                historyCost: 9,
-                latestTokens: 30,
-                historyTokens: 300,
-                points: [
-                    .init(id: "1", label: "Mon", value: 1, accessibilityValue: "Monday: $1"),
-                    .init(id: "2", label: "Tue", value: 3, accessibilityValue: "Tuesday: $3"),
-                ]))
+        let dashboard = Self.codexDashboard()
+        let claudeDashboard = Self.claudeDashboard()
         let codexMetrics = [
             Self.metric(id: "primary", title: "Session", percent: 80),
             Self.metric(id: "secondary", title: "Weekly", percent: 61, pacePercent: 78, paceOnTop: false),
@@ -193,6 +151,8 @@ struct UsageMenuCardLayoutTests {
             $0.metrics.map(\.id) == ["primary", "secondary", "claude-weekly-scoped-fable"]
         })
         #expect(claudeModel.accounts.last?.metrics.isEmpty == true)
+        #expect(codexModel.accounts.dropLast().allSatisfy { $0.refreshedText == "Not fetched yet" })
+        #expect(codexModel.accounts.last?.refreshedText == nil)
         let accountGrid = CompactOverviewAccountGridModel(providerModels: [codexModel, claudeModel])
         #expect(accountGrid.cards.count == 16)
         #expect(accountGrid.rows.count == 8 && accountGrid.rows.allSatisfy { $0.cards.count == 2 })
@@ -214,6 +174,20 @@ struct UsageMenuCardLayoutTests {
             [.cursor, .grok],
             [.antigravity],
         ])
+        let errorCursorCard = try #require(previewGrid.cards.first { $0.provider == .cursor })
+        #expect(errorCursorCard.refreshedText == nil)
+        #expect(errorCursorCard.statusText == "Session changed during refresh")
+        let hoverGrokCard = try #require(previewGrid.cards.first { $0.provider == .grok })
+        #expect(hoverGrokCard.refreshedText == "Updated 2m ago")
+        #expect(hoverGrokCard.hoverDetailLines == [
+            "Today: $2.13 · 5.2M tokens",
+            "Last 30 days: $63.10 · 1.2B tokens",
+        ])
+        // The shortest card carries the fullest panel so the snapshot proves clipping stays
+        // inside the rounded card bounds.
+        let fullPanelCodexCard = try #require(previewGrid.cards.first { $0.provider == .codex })
+        #expect(fullPanelCodexCard.hoverDetailLines.count == 5)
+        #expect(fullPanelCodexCard.refreshedText?.hasPrefix("Updated") == true)
         let aggregateDashboard = try #require(CompactOverviewDashboard.aggregate([
             .init(provider: .codex, providerName: "Codex", dashboard: dashboard),
             .init(provider: .claude, providerName: "Claude", dashboard: claudeDashboard),
@@ -235,6 +209,11 @@ struct UsageMenuCardLayoutTests {
         let preview = VStack(spacing: 0) {
             CompactOverviewAccountGridView(model: previewGrid, width: width)
             Divider()
+            CompactOverviewAccountGridView(
+                model: previewGrid,
+                width: width,
+                initialHoveredCardID: fullPanelCodexCard.id)
+            Divider()
             CompactOverviewDashboardView(model: aggregateDashboard, width: width)
         }
         .frame(width: width)
@@ -245,6 +224,83 @@ struct UsageMenuCardLayoutTests {
         #expect(abs(size.width - width) < Self.heightTolerance)
         #expect(size.height > 0)
         try Self.writeSnapshotIfRequested(preview, size: size)
+    }
+
+    @Test
+    func `compact overview cards carry refreshed text and hover cost lines`() {
+        let costModel = Self.model(
+            provider: .cursor,
+            providerName: "Cursor",
+            email: "cursor.account@gmail.com",
+            subtitleText: "Updated 3m ago",
+            providerCost: .init(
+                title: "Extra usage",
+                percentUsed: nil,
+                spendLine: "$12.40 used",
+                percentLine: "62% of budget",
+                balanceLine: "Balance: $37.60",
+                personalSpendLine: "You: $8.10",
+                presentation: .detail,
+                showsInProviderDetails: true),
+            tokenUsage: .init(
+                sessionLine: "Today: $2.13 · 5.2M tokens",
+                monthLine: "Last 30 days: $63.10 · 1.2B tokens",
+                meteredLine: "Cursor-metered: $4.20 (last 30 days)",
+                hintLine: "Estimated from token usage",
+                errorLine: nil,
+                errorCopyText: nil))
+        let costCard = CompactOverviewProviderCardModel(
+            providerModel: costModel,
+            accountModels: [(id: "cursor", model: costModel)])
+        #expect(costCard.accounts.first?.refreshedText == "Updated 3m ago")
+        #expect(costCard.accounts.first?.hoverDetailLines == [
+            "Today: $2.13 · 5.2M tokens",
+            "Last 30 days: $63.10 · 1.2B tokens",
+            "Cursor-metered: $4.20 (last 30 days)",
+            "Extra usage: $12.40 used · 62% of budget",
+            "Balance: $37.60 · You: $8.10",
+        ])
+
+        // Error and placeholder cards keep their status line and never show a refreshed line.
+        let errorModel = Self.model(
+            provider: .cursor,
+            providerName: "Cursor",
+            email: "cursor.account@gmail.com",
+            subtitleText: "Session changed during refresh",
+            subtitleStyle: .error)
+        let errorCard = CompactOverviewProviderCardModel(
+            providerModel: errorModel,
+            accountModels: [(id: "cursor-error", model: errorModel)])
+        #expect(errorCard.accounts.first?.refreshedText == nil)
+        #expect(errorCard.accounts.first?.statusText == "Session changed during refresh")
+        #expect(errorCard.accounts.first?.hoverDetailLines.isEmpty == true)
+    }
+
+    @Test
+    func `compact overview grid adopts live models only when heights cannot change`() {
+        func grid(subtitle: String, metricTitle: String, percent: Double) -> CompactOverviewAccountGridModel {
+            let model = Self.model(
+                provider: .grok,
+                providerName: "Grok",
+                subtitleText: subtitle,
+                metrics: [Self.metric(id: "secondary", title: metricTitle, percent: percent)])
+            return CompactOverviewAccountGridModel(providerModels: [
+                CompactOverviewProviderCardModel(
+                    providerModel: model,
+                    accountModels: [(id: "grok", model: model)]),
+            ])
+        }
+
+        let baked = grid(subtitle: "Updated 5m ago", metricTitle: "Weekly", percent: 61)
+        // Text-only changes (fresh timestamp, new percent) adopt the live grid.
+        let freshValues = grid(subtitle: "Updated just now", metricTitle: "Weekly", percent: 42)
+        #expect(baked.isStructurallyCompatible(with: freshValues))
+        #expect(baked.preferringLive(freshValues).cards.first?.refreshedText == "Updated just now")
+        // Structure changes (a metric appearing/renaming) keep the baked measured layout.
+        let renamedMetric = grid(subtitle: "Updated just now", metricTitle: "Session", percent: 42)
+        #expect(!baked.isStructurallyCompatible(with: renamedMetric))
+        #expect(baked.preferringLive(renamedMetric).cards.first?.refreshedText == "Updated 5m ago")
+        #expect(baked.preferringLive(nil).cards.first?.refreshedText == "Updated 5m ago")
     }
 
     @Test
@@ -311,6 +367,56 @@ struct UsageMenuCardLayoutTests {
             hasKnownAccounts: false))
     }
 
+    private static func codexDashboard() -> InlineUsageDashboardModel {
+        InlineUsageDashboardModel(
+            accessibilityLabel: "30 day usage",
+            valueStyle: .currencyUSD,
+            kpis: [
+                .init(title: "Today", value: "$12.40", emphasis: true),
+                .init(title: "30d", value: "$93.70", emphasis: false),
+                .init(title: "Latest tokens", value: "2.7B", emphasis: false),
+                .init(title: "30d tokens", value: "5B", emphasis: false),
+            ],
+            points: [
+                .init(id: "1", label: "Mon", value: 4, accessibilityValue: "Monday: $4"),
+                .init(id: "2", label: "Tue", value: 12, accessibilityValue: "Tuesday: $12"),
+            ],
+            detailLines: ["Top model: example", "Estimated from token usage"],
+            currencyCode: "USD",
+            costAggregation: .init(
+                currencyCode: "USD",
+                historyDays: 30,
+                todayCost: 12,
+                historyCost: 16,
+                latestTokens: 100,
+                historyTokens: 1000,
+                points: [
+                    .init(id: "1", label: "Mon", value: 4, accessibilityValue: "Monday: $4"),
+                    .init(id: "2", label: "Tue", value: 12, accessibilityValue: "Tuesday: $12"),
+                ]))
+    }
+
+    private static func claudeDashboard() -> InlineUsageDashboardModel {
+        InlineUsageDashboardModel(
+            accessibilityLabel: "30 day Claude usage",
+            valueStyle: .currencyUSD,
+            kpis: [],
+            points: [],
+            detailLines: [],
+            currencyCode: "USD",
+            costAggregation: .init(
+                currencyCode: "USD",
+                historyDays: 30,
+                todayCost: 7,
+                historyCost: 9,
+                latestTokens: 30,
+                historyTokens: 300,
+                points: [
+                    .init(id: "1", label: "Mon", value: 1, accessibilityValue: "Monday: $1"),
+                    .init(id: "2", label: "Tue", value: 3, accessibilityValue: "Tuesday: $3"),
+                ]))
+    }
+
     private static func metric(
         id: String,
         title: String,
@@ -349,7 +455,14 @@ struct UsageMenuCardLayoutTests {
             provider: .grok,
             providerName: "Grok",
             email: "grok.account@gmail.com",
-            metrics: grokMetrics)
+            subtitleText: "Updated 2m ago",
+            metrics: grokMetrics,
+            tokenUsage: .init(
+                sessionLine: "Today: $2.13 · 5.2M tokens",
+                monthLine: "Last 30 days: $63.10 · 1.2B tokens",
+                hintLine: nil,
+                errorLine: nil,
+                errorCopyText: nil))
         let antigravityMetrics = [
             Self.metric(id: "primary", title: "Gemini", percent: 100),
             Self.metric(id: "secondary", title: "Claude/GPT", percent: 100),
@@ -360,6 +473,23 @@ struct UsageMenuCardLayoutTests {
             email: "google.account@gmail.com",
             metrics: antigravityMetrics)
 
+        let fullCostLines = (
+            providerCost: UsageMenuCardView.Model.ProviderCostSection(
+                title: "Extra usage",
+                percentUsed: nil,
+                spendLine: "$12.40 used",
+                percentLine: "62% of budget",
+                balanceLine: "Balance: $37.60",
+                personalSpendLine: "You: $8.10",
+                presentation: .detail,
+                showsInProviderDetails: true),
+            tokenUsage: UsageMenuCardView.Model.TokenUsageSection(
+                sessionLine: "Today: $2.13 · 5.2M tokens",
+                monthLine: "Last 30 days: $63.10 · 1.2B tokens",
+                meteredLine: "Cursor-metered: $4.20 (last 30 days)",
+                hintLine: nil,
+                errorLine: nil,
+                errorCopyText: nil))
         return CompactOverviewAccountGridModel(providerModels: [
             CompactOverviewProviderCardModel(
                 providerModel: codexAccount,
@@ -367,7 +497,13 @@ struct UsageMenuCardLayoutTests {
                     (id: "preview-codex-\(index)", model: Self.model(
                         provider: .codex,
                         email: index == 1 ? "primary.account@gmail.com" : "secondary.account@gmail.com",
+                        // Literal in RelativeDateTimeFormatter's real shape; calling
+                        // UsageFormatter here would race the formatter suite's global
+                        // locale-provider injection under parallel testing.
+                        subtitleText: "Updated 2 min. ago",
                         metrics: codexMetrics,
+                        providerCost: index == 1 ? fullCostLines.providerCost : nil,
+                        tokenUsage: index == 1 ? fullCostLines.tokenUsage : nil,
                         dashboard: dashboard))
                 }),
             CompactOverviewProviderCardModel(
@@ -427,6 +563,8 @@ struct UsageMenuCardLayoutTests {
         metrics: [UsageMenuCardView.Model.Metric] = [],
         usageNotes: [String] = [],
         creditsText: String? = nil,
+        providerCost: UsageMenuCardView.Model.ProviderCostSection? = nil,
+        tokenUsage: UsageMenuCardView.Model.TokenUsageSection? = nil,
         placeholder: String? = nil,
         dashboard: InlineUsageDashboardModel? = nil) -> UsageMenuCardView.Model
     {
@@ -447,8 +585,8 @@ struct UsageMenuCardLayoutTests {
             creditsScaleText: nil,
             creditsHintText: nil,
             creditsHintCopyText: nil,
-            providerCost: nil,
-            tokenUsage: nil,
+            providerCost: providerCost,
+            tokenUsage: tokenUsage,
             placeholder: placeholder,
             progressColor: UsageMenuCardView.Model.progressColor(for: provider))
     }

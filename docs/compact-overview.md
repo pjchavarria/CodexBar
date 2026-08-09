@@ -42,6 +42,20 @@ of the app close to stock.
   one Codex app through manual logout/login; Chrome profiles are authentication checkpoints, not persistent app routes.
 - Show Codex Weekly only. Show Claude Session, Weekly, and Fable only as equally compact peer bars in Claude's provider
   color, preserving the existing red pacing and threshold markers.
+- Every card without an error/placeholder status line ends with the model's subtitle as a muted "Updated Xm ago" line
+  (also "Refreshing…"/"Not fetched yet"); error and placeholder cards keep only their status line.
+- Hovering a card for ~250 ms crossfades the card content into a same-size cost/token reveal inside the card's own
+  fill (no identity header — the lines are vertically centered, and the card clips after the overlay so no pixel can
+  cross its rounded bounds). The lines are the card model's existing `tokenUsage` session/month/metered/error lines
+  and `providerCost` spend/percent/balance/personal lines with the two short cost pairs sharing a line
+  (`spend · percent`, `balance · personal`) so the fullest set fits the shortest card; comparison-period and hint
+  lines stay in the full card. The reveal never changes the cached menu-item height, and cards whose models carry no
+  cost/token sections reveal nothing. The lines are also the card's tooltip (`.help`) and
+  accessibility value. Open-root menus never rebuild while open (`refreshOpenMenuIfNeeded` defers the parent rebuild),
+  so live freshness flows only through `MenuCardRefreshMonitor`: the grid shows "Refreshing…" per provider while a
+  manual refresh is in flight, then re-resolves the whole grid from the store — adopted only when structurally
+  compatible with the baked layout (same cards/metrics), so cached item heights cannot change; incompatible results
+  keep the baked layout until the menu reopens.
 - Do not render usage dashboards inside account or provider sections. Render one combined cost/token KPI and chart
   model at the bottom of the entire overview, without dashboard detail lines. Keep the four KPIs global while stacking
   each chart day by provider color with a text legend. Aggregate retained typed usage values and provider identity
