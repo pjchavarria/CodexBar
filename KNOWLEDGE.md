@@ -258,3 +258,18 @@
   identical ten `CodexManagedRoutingTests` tests hung with and without the working-tree changes.
 - **Revisit when:** The widget snapshot store gains a bounded read, or tests inject a temporary snapshot
   directory instead of resolving the real container.
+
+## KB-015 · Installer shell scripts must survive macOS's bash 3.2
+
+- **What:** Anything under `Scripts/` that a user or installer runs directly executes on the system
+  `/bin/bash`, which is bash 3.2. There, expanding a possibly-empty array with `"${arr[@]}"` under
+  `set -u` aborts as an unbound variable — the exact failure that killed the first real
+  `install_personal_app.sh` run in `remove_obsolete_install_artifacts` when `/Applications` held no
+  leftover artifacts. Length expansion `${#arr[@]}` is safe, so every such expansion sits behind a
+  `[[ ${#arr[@]} -gt 0 ]]` guard.
+- **Why:** Development and CI shells are newer bash or zsh, so the suite can stay green for months
+  while the one environment that matters — a stock Mac — fails on the empty path nobody fixtures.
+- **Evidence:** `Scripts/install_personal_app.sh` (`remove_obsolete_install_artifacts`),
+  the `/bin/bash` empty-artifacts regression in `Scripts/test_personal_app_installer.sh`,
+  commit 205110bd (2026-08-09).
+- **Revisit when:** Scripts pin a modern bash via Homebrew, or macOS ships bash 4+.
