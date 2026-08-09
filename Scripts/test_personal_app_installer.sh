@@ -220,6 +220,17 @@ CODEXBAR_PERSONAL_SOURCE_ONLY=1 CODEXBAR_PERSONAL_INSTALL_PATH="$RECOVERY_TARGET
 [[ ! -e "$RECOVERY_TEST_ROOT/CodexBar.failed-123.app" ]]
 [[ ! -e "$RECOVERY_TEST_ROOT/.CodexBar.install.STALE" ]]
 
+# macOS's stock /bin/bash is 3.2, where "${empty[@]}" under set -u aborts; a clean /Applications
+# with no leftover artifacts is the common case, so it must pass under exactly that interpreter.
+if ! CODEXBAR_PERSONAL_SOURCE_ONLY=1 CODEXBAR_PERSONAL_INSTALL_PATH="$RECOVERY_TARGET" \
+  /bin/bash -c 'source "$1"; remove_obsolete_install_artifacts' \
+    installer-test "$ROOT/Scripts/install_personal_app.sh"
+then
+  echo "Artifact cleanup failed under /bin/bash with no leftover artifacts" >&2
+  exit 1
+fi
+[[ -e "$RECOVERY_TARGET" ]]
+
 if [[ "$(awk '/install_packaged_app "\$packaged"/,0' "$ROOT/Scripts/install_personal_app.sh" \
   | grep -oE 'launch_and_verify|disable_legacy_personal_login_item' | head -2 | tr '\n' ' ')" \
   != "launch_and_verify disable_legacy_personal_login_item " ]]

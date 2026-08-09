@@ -320,7 +320,9 @@ remove_obsolete_install_artifacts() {
     validate_install_transaction_dir "$transaction"
     transactions+=("$transaction")
   done < <(find "$target_dir" -mindepth 1 -maxdepth 1 -type d -name ".$target_stem.install.*" -print0)
-  if [[ ! -e "$TARGET_APP" ]]; then
+  # macOS ships bash 3.2, where expanding an empty array under `set -u` is an unbound-variable
+  # error, so every "${transactions[@]}" stays behind a length guard.
+  if [[ ! -e "$TARGET_APP" && "${#transactions[@]}" -gt 0 ]]; then
     local -a restorable=()
     for transaction in "${transactions[@]}"; do
       [[ ! -e "$transaction/previous.app" ]] || restorable+=("$transaction/previous.app")
@@ -332,9 +334,11 @@ remove_obsolete_install_artifacts() {
         || fail "Could not restore the app from an interrupted install"
     fi
   fi
-  for transaction in "${transactions[@]}"; do
-    rm -rf "$transaction"
-  done
+  if [[ "${#transactions[@]}" -gt 0 ]]; then
+    for transaction in "${transactions[@]}"; do
+      rm -rf "$transaction"
+    done
+  fi
 }
 
 restore_running_app_on_failure() {
