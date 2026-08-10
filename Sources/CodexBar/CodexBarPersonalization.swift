@@ -27,6 +27,13 @@ enum CodexBarPersonalization {
         return !SettingsStore.isRunningTests
     }
 
+    /// The status item shows every monitored account as provider columns instead of one provider's
+    /// number. It rides on the same account projection as the compact overview, so it is enabled
+    /// exactly where that surface is.
+    static var menuBarAccountGridEnabled: Bool {
+        self.compactOverviewEnabled
+    }
+
     nonisolated static func sanitizedLaunchEnvironment(
         featureEnabled: Bool,
         environment: [String: String]) -> [String: String]

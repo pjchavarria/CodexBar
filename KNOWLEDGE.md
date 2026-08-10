@@ -293,3 +293,29 @@
   `Sources/CodexBar/MenuCardRefreshMonitor.swift`, `Sources/CodexBar/CompactOverviewProviderCard.swift`
   (`preferringLive`/`isStructurallyCompatible`), `Sources/CodexBar/MenuCardView.swift:353-357`.
 - **Revisit when:** Menu hosting moves off NSMenu or open-menu rebuilds become supported.
+
+## KB-017 · A new menu-bar rendering path must join the countdown scheduler
+
+- **Status:** active
+- **Last verified:** 2026-08-09
+- **Use when:** Adding or changing anything the status item draws that changes with the clock rather
+  than with fetched data — a countdown, a relative time, a "resets in" token, a smart-exhausted swap.
+- **Knowledge:** Menu-bar text only re-renders when something calls `updateIcons()`. Time-derived text
+  therefore needs `scheduleMenuBarCountdownRefreshIfNeeded` to arm a boundary wake for it, and that
+  function is gated per display mode: it collects reset dates only for custom layouts carrying
+  `.resetCountdown`/`.resetAbsolute`, or for brand+percent with reset-time/smart-exhausted. A path that
+  draws a countdown outside those gates is invisible to it and goes stale until an unrelated refresh.
+  Its provider source is also narrow — `menuBarRefreshProviders()` yields only the primary merged
+  provider and one snapshot window, so multi-account/multi-provider resets must supply their own dates
+  (`StatusItemController.menuBarAccountGridResetDates` → `menuBarAccountGridRefreshDelay`). Schedule
+  from the same model that was drawn, and wake on the displayed unit's boundary: a largest-unit `6d`
+  must not arm a per-minute timer.
+- **Why:** The account grid shipped drawing a countdown on every row while no timer was armed for any
+  of them; the scheduling gap is invisible in review because the drawing code and the scheduling code
+  sit in different files and the text looks correct at first render.
+- **Evidence:** `Sources/CodexBar/StatusItemController+CountdownRefresh.swift`,
+  `Sources/CodexBar/MenuBarAccountGrid.swift` (`compactResetChangeDelay`),
+  `Tests/CodexBarTests/MenuBarAccountGridCountdownTests.swift`. `updateIcons` schedules from its
+  `defer` so the pass observes what was just drawn (`Sources/CodexBar/StatusItemController.swift`).
+- **Revisit when:** The status item stops being redrawn through `updateIcons`, or scheduling moves into
+  the renderers themselves.

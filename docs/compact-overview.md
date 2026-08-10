@@ -64,7 +64,17 @@ of the app close to stock.
   selected for quota monitoring. Account cards remain account-scoped; the bottom chart remains provider-global.
 - Route B is the only runtime menu: do not attach provider tabs, submenus, alternate layouts, or agent-session rows.
   Keep bottom Refresh, Settings, and Quit actions.
-- Leave the status-item visualization unchanged until a later design decision.
+- The status item is a per-account grid drawn as one template image: a column per enabled provider, a row per
+  account, one provider mark per column at the single-line icon size (16 pt) centered on its rows, and every value
+  in its own right-aligned lane so percentages and reset countdowns line up down the rows. Codex contributes its
+  weekly lane; Claude contributes session then weekly as separate lanes — never joined with a slash. The trailing
+  lane is a compact largest-unit countdown (`6d`, `5h`, `14m`) taken from the row's weekly reset instant, so
+  accounts on different reset cycles stay truthful. Every drawn countdown arms the menu-bar refresh timer on
+  its own displayed-unit boundary — a day-scale row wakes once a day, and only the final hour ticks per
+  minute — so no row's countdown can sit stale waiting for the next usage fetch. Values, accounts and errors come from the same
+  `compactOverviewProviderCardModels()` projection the menu renders, so the bar can never disagree with the menu it
+  opens. The bar is capped at `MenuBarAccountGrid.maxRows` (2) rows per provider because the menu bar has two text
+  lines; the overview menu remains the complete census.
 
 ## Replacement transfer boundary
 

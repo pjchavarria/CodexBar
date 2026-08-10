@@ -51,6 +51,7 @@ extension UsageMenuCardView.Model {
                 percent: Self.clamped(input.usageBarsShowUsed ? window.usedPercent : window.remainingPercent),
                 percentStyle: percentStyle,
                 resetText: Self.resetText(for: window, style: input.resetTimeDisplayStyle, now: input.now),
+                resetsAt: window.resetsAt,
                 detailText: nil,
                 detailLeftText: paceDetail?.leftLabel,
                 detailRightText: paceDetail?.rightLabel,

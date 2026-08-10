@@ -259,3 +259,25 @@
 - **Supersedes:** PD-010's QuotaRoom install identity (the separate-app boundary and license-notice duties carry
   over to the CodexBar identity). Parks PD-012's standalone replacement and PD-017/PD-018's TokenReserve storefront
   and channel work — those decisions stay recorded and become binding again only if the standalone is revived.
+
+
+## PD-020 · The status item shows every account as a provider grid
+- **Status:** locked
+- **Locked:** 2026-08-09
+- **Decision:** The merged status item renders every enabled provider's monitored accounts instead of one provider's
+  single number. Layout is a grid drawn into one template image: one column per provider, one row per account, one
+  provider mark per column at the single-line icon size (16 pt) vertically centered on its rows, and one
+  right-aligned lane per value so the numbers and the reset countdown line up down the rows. Codex contributes its
+  weekly lane; Claude contributes session and weekly as two separate lanes, never joined by a slash. Each row ends
+  with a compact largest-unit countdown derived from that row's own weekly reset instant. The grid stays capped at
+  two rows per provider — the menu bar has two text lines — while the overview menu remains the complete census.
+- **Why:** The old item answered "how much is left on one account" while the fork monitors four. Route B already
+  resolves every account; spending menu-bar width on that census removes the click that the overview existed to
+  serve. Drawing it as an image rather than an attributed title is what makes column alignment possible at all:
+  attributed text has no column concept, so values would drift with the width of whatever precedes them.
+- **Residual risk:** The item is roughly two to three times its previous width and grows with each enabled provider,
+  which is real estate the menu bar contests on a notched display; macOS drops overflowing extras silently. Reset
+  countdowns still change the item's width as they tick down.
+- **Supersedes:** The "leave the status-item visualization unchanged" hold in `docs/compact-overview.md`, and the
+  "merged status item kept exactly as shipped" clause of PD-019. PD-019 keeps every other decision it carries.
+- **Applies to:** Status-item rendering, menu-bar layout presets, and any future per-account bar surface.

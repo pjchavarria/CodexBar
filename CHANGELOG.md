@@ -11,6 +11,11 @@
 - Menu: the compact multi-account layout now covers every stacked multi-account list — token accounts on any provider and Codex accounts (flat lists; workspace-grouped Codex lists keep their sections).
 - Menu bar: Session/Weekly/Auto pace layout tokens that render the signed pace delta (`+11%`, `-8%`, `0%`), restoring the pre-0.45 "Both" display in the layout editor (#2540, fixes #2534). Thanks @kratocz!
 
+- Personalization: the status item now shows every monitored account as a provider grid — one column per provider, one
+  row per account, the provider mark once per column at full icon size, and every percentage and reset countdown in its
+  own right-aligned lane so the rows line up. Codex shows its weekly lane; Claude shows session and weekly as separate
+  lanes instead of a slash-joined pair.
+
 ### Fixed
 - Personalization: restore Codex to the global provider-colored cost chart by reading the ambient local Codex session
   ledger instead of the currently selected managed quota account, and equalize both cards in every two-column row.

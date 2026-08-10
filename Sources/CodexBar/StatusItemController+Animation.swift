@@ -248,6 +248,14 @@ extension StatusItemController {
         let snapshot = self.store.snapshot(for: primaryProvider)
         let warningFlash = self.quotaWarningFlashActive(provider: primaryProvider)
 
+        // Fork surface first: the whole account census, not the primary provider's single number.
+        if let gridResult = self.applyMenuBarAccountGridIfNeeded(
+            statusItem: self.statusItem,
+            warningFlash: warningFlash)
+        {
+            return gridResult
+        }
+
         if let layoutResult = self.applyStoredUnifiedMenuBarLayoutIfNeeded(
             provider: primaryProvider,
             snapshot: snapshot,
@@ -301,35 +309,21 @@ extension StatusItemController {
 
         let statusIndicator = self.store.statusIndicator(for: primaryProvider)
         if showBrandPercent,
-           let brand = ProviderBrandIcon.image(for: primaryProvider)
+           let brandResult = self.applyMergedBrandPercentContent(
+               MergedBrandPercentContext(
+                   provider: primaryProvider,
+                   snapshot: snapshot,
+                   style: style,
+                   statusIndicator: statusIndicator,
+                   primary: primary,
+                   weekly: weekly,
+                   credits: credits,
+                   stale: stale,
+                   warningFlash: warningFlash,
+                   needsAnimation: needsAnimation),
+               button: button)
         {
-            let displayText = self.menuBarDisplayText(for: primaryProvider, snapshot: snapshot)
-            let displayedImage = warningFlash ? Self.quotaWarningFlashImage(base: brand) : brand
-            let signature = [
-                "mode=brandPercent",
-                "provider=\(primaryProvider.rawValue)",
-                "style=\(String(describing: style))",
-                "primary=\(Self.iconSignatureValue(primary))",
-                "weekly=\(Self.iconSignatureValue(weekly))",
-                "credits=\(Self.iconSignatureValue(credits))",
-                "stale=\(stale ? "1" : "0")",
-                "status=\(statusIndicator.rawValue)",
-                "text=\(displayText ?? "nil")",
-                "warningFlash=\(warningFlash ? "1" : "0")",
-                "anim=\(needsAnimation ? "1" : "0")",
-                "hideCritters=\(self.settings.menuBarHidesCritters ? "1" : "0")",
-                "highContrast=\(self.shouldUseHighContrastStatusItemContent ? "1" : "0")",
-            ].joined(separator: "|")
-            if self.shouldSkipMergedIconRender(signature) {
-                // AppKit can lose button content state independently of the cached render signature.
-                // Keep this cheap path self-healing even when the provider image itself can be skipped.
-                self.setButtonContent(image: displayedImage, title: displayText, for: button)
-                self.noteIconPerfRender(skipped: true)
-                return true
-            }
-            self.setButtonContent(image: displayedImage, title: displayText, for: button)
-            self.noteIconPerfRender(skipped: false)
-            return false
+            return brandResult
         }
 
         // Brand + percent returns above; remaining paths are image-only apart from the debug marker.
@@ -398,6 +392,53 @@ extension StatusItemController {
         }
         self.noteIconPerfRender(skipped: false)
         return false
+    }
+
+    struct MergedBrandPercentContext {
+        let provider: UsageProvider
+        let snapshot: UsageSnapshot?
+        let style: IconStyle
+        let statusIndicator: ProviderStatusIndicator
+        let primary: Double?
+        let weekly: Double?
+        let credits: Double?
+        let stale: Bool
+        let warningFlash: Bool
+        let needsAnimation: Bool
+    }
+
+    /// Brand icon plus the primary provider's percent — the merged status item's rendering whenever the
+    /// fork grid does not apply and no stored layout claims the item. Returns `nil` when the provider
+    /// has no brand artwork, leaving the caller on the image-only paths.
+    private func applyMergedBrandPercentContent(
+        _ context: MergedBrandPercentContext,
+        button: NSStatusBarButton)
+        -> Bool?
+    {
+        guard let brand = ProviderBrandIcon.image(for: context.provider) else { return nil }
+        let displayText = self.menuBarDisplayText(for: context.provider, snapshot: context.snapshot)
+        let displayedImage = context.warningFlash ? Self.quotaWarningFlashImage(base: brand) : brand
+        let signature = [
+            "mode=brandPercent",
+            "provider=\(context.provider.rawValue)",
+            "style=\(String(describing: context.style))",
+            "primary=\(Self.iconSignatureValue(context.primary))",
+            "weekly=\(Self.iconSignatureValue(context.weekly))",
+            "credits=\(Self.iconSignatureValue(context.credits))",
+            "stale=\(context.stale ? "1" : "0")",
+            "status=\(context.statusIndicator.rawValue)",
+            "text=\(displayText ?? "nil")",
+            "warningFlash=\(context.warningFlash ? "1" : "0")",
+            "anim=\(context.needsAnimation ? "1" : "0")",
+            "hideCritters=\(self.settings.menuBarHidesCritters ? "1" : "0")",
+            "highContrast=\(self.shouldUseHighContrastStatusItemContent ? "1" : "0")",
+        ].joined(separator: "|")
+        // AppKit can lose button content state independently of the cached render signature. Keep this
+        // cheap path self-healing even when the provider image itself can be skipped.
+        let skipped = self.shouldSkipMergedIconRender(signature)
+        self.setButtonContent(image: displayedImage, title: displayText, for: button)
+        self.noteIconPerfRender(skipped: skipped)
+        return skipped
     }
 
     private func applyStoredUnifiedMenuBarLayoutIfNeeded(
@@ -782,7 +823,7 @@ extension StatusItemController {
         return true
     }
 
-    private func setButtonContent(image: NSImage, title: String?, for button: NSStatusBarButton) {
+    func setButtonContent(image: NSImage, title: String?, for button: NSStatusBarButton) {
         let isDebugApp = Self.isDebugApp(bundleIdentifier: Bundle.main.bundleIdentifier)
         let value = Self.buttonTitle(
             title,

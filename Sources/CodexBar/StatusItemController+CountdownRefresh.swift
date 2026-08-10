@@ -44,6 +44,15 @@ extension StatusItemController {
             }
         }
 
+        // The account grid draws a countdown on every account row regardless of the display modes
+        // handled above, so its own instants have to arm the timer too. The list is whatever the grid
+        // last drew and is emptied when it leaves the item, so no separate mode gate belongs here.
+        if let delay = Self.menuBarAccountGridRefreshDelay(
+            resetDates: self.menuBarAccountGridResetDates,
+            now: now)
+        {
+            delays.append(delay)
+        }
         if let delay = Self.menuBarCountdownRefreshDelay(resetDates: countdownResetDates, now: now) {
             // Countdown text ticks every minute; refresh on each displayed-minute boundary (the last of
             // which lands at the reset, flipping a smart-exhausted lane back to the percentage).
@@ -91,6 +100,24 @@ extension StatusItemController {
             return max(
                 self.menuBarCountdownRefreshEpsilon,
                 remaining - nextBoundaryRemaining + self.menuBarCountdownRefreshEpsilon)
+        }.min()
+    }
+
+    /// Soonest instant at which any account-grid row's compact countdown changes its text.
+    ///
+    /// Unlike the minute-ticking countdown above, the grid's text is largest-unit, so a week-away reset
+    /// contributes one wake per day rather than one per minute; only the final hour ticks per minute.
+    nonisolated static func menuBarAccountGridRefreshDelay(
+        resetDates: [Date],
+        now: Date)
+        -> TimeInterval?
+    {
+        resetDates.compactMap { resetDate -> TimeInterval? in
+            guard let delay = MenuBarAccountGrid.compactResetChangeDelay(for: resetDate, now: now)
+            else { return nil }
+            return max(
+                self.menuBarCountdownRefreshEpsilon,
+                delay + self.menuBarCountdownRefreshEpsilon)
         }.min()
     }
 

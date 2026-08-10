@@ -209,6 +209,7 @@ extension UsageMenuCardView.Model {
                 percentStyle: metric.percentStyle,
                 statusText: PersonalInfoRedactor.redactEmails(in: metric.statusText, isEnabled: true),
                 resetText: PersonalInfoRedactor.redactEmails(in: metric.resetText, isEnabled: true),
+                resetsAt: metric.resetsAt,
                 detailText: Self.redactedMetricDetail(
                     metric.detailText,
                     provider: provider,

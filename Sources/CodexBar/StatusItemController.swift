@@ -302,6 +302,8 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
     var providerSelectionUIRefreshTask: Task<Void, Never>?
     var deferredMergedIconRenderAfterTracking = false
     var lastAppliedMergedIconRenderSignature: String?
+    /// Reset instants behind the countdowns the account grid last drew, empty when it is not on screen.
+    var menuBarAccountGridResetDates: [Date] = []
     var lastAppliedProviderIconRenderSignatures: [UsageProvider: String] = [:]
     let menuBarLayoutRenderer = MenuBarLayoutRenderer()
     var lastObservedStoreIconWorkSignature: String?
@@ -720,10 +722,12 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
         guard !self.isReleasedForTesting else { return }
         #endif
         MainThreadActivityBreadcrumb.push("updateIcons")
-        self.scheduleMenuBarCountdownRefreshIfNeeded()
         self.lastObservedStoreIconWorkSignature = precomputedStoreIconSignature ?? self.storeIconObservationSignature()
         self.beginIconPerfUpdatePass()
         defer {
+            // After the render, not before: the account grid publishes the reset instants it just drew,
+            // and every exit path below must leave the next countdown boundary armed.
+            self.scheduleMenuBarCountdownRefreshIfNeeded()
             self.endIconPerfUpdatePass()
             MainThreadActivityBreadcrumb.pop()
         }
@@ -745,6 +749,9 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
             }
             self.attachMenus()
         } else {
+            // Per-provider items: the account grid is not on screen, so it stops arming the refresh
+            // timer. Only the merged path below it can publish drawn countdowns.
+            self.menuBarAccountGridResetDates = []
             UsageProvider.allCases.forEach { self.applyIcon(for: $0, phase: phase) }
             self.attachMenus(fallback: self.fallbackProvider)
         }
@@ -911,11 +918,6 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
     func isVisible(_ provider: UsageProvider) -> Bool {
         self.store.debugForceAnimation || self.isEnabled(provider)
             || self.fallbackProvider == provider
-    }
-
-    var shouldMergeIcons: Bool {
-        CodexBarPersonalization.compactOverviewEnabled ||
-            (self.settings.mergeIcons && self.store.enabledProvidersForDisplay().count > 1)
     }
 
     func switchAccountSubtitle(for target: UsageProvider) -> String? {

@@ -2,6 +2,13 @@ import AppKit
 import CodexBarCore
 
 extension StatusItemController {
+    /// The fork always merges: one status item carrying every account. Upstream keeps its own
+    /// multi-provider condition for installs where the personalization is off.
+    var shouldMergeIcons: Bool {
+        CodexBarPersonalization.compactOverviewEnabled ||
+            (self.settings.mergeIcons && self.store.enabledProvidersForDisplay().count > 1)
+    }
+
     func personalCompactOverviewProviders(for menu: NSMenu? = nil) -> [UsageProvider]? {
         guard CodexBarPersonalization.compactOverviewEnabled else { return nil }
         if let menu, let mergedMenu = self.mergedMenu, menu !== mergedMenu { return nil }
@@ -151,13 +158,14 @@ extension StatusItemController {
             usesGPUSelection: true)
     }
 
-    /// Live counterpart of the menu-build path: re-derives the account grid from current store
-    /// state so the observed refresh monitor can surface completed refreshes in an open menu.
-    func resolveLiveCompactOverviewGridModel() -> CompactOverviewAccountGridModel? {
+    /// Per-provider account projection behind both compact surfaces: the menu's card grid and the
+    /// status item's account grid. Both read the same accounts, values and errors, so the bar can
+    /// never disagree with the menu it opens.
+    func compactOverviewProviderCardModels() -> [CompactOverviewProviderCardModel] {
         let enabledProviders = self.store.enabledProvidersForDisplay()
         let usesCompactOverview = self.usesCompactOverview(enabledProviders: enabledProviders)
-        guard usesCompactOverview else { return nil }
-        let providerModels = self.personalizedOverviewProviders(enabledProviders)
+        guard usesCompactOverview else { return [] }
+        return self.personalizedOverviewProviders(enabledProviders)
             .compactMap { provider -> CompactOverviewProviderCardModel? in
                 guard let model = self.menuCardModel(for: provider) else { return nil }
                 guard CodexBarPersonalization.includesOverviewProvider(
@@ -166,6 +174,12 @@ extension StatusItemController {
                     hasKnownAccounts: self.hasKnownCompactOverviewAccounts(for: provider)) else { return nil }
                 return self.compactOverviewProviderCardModel(provider: provider, providerModel: model)
             }
+    }
+
+    /// Live counterpart of the menu-build path: re-derives the account grid from current store
+    /// state so the observed refresh monitor can surface completed refreshes in an open menu.
+    func resolveLiveCompactOverviewGridModel() -> CompactOverviewAccountGridModel? {
+        let providerModels = self.compactOverviewProviderCardModels()
         guard !providerModels.isEmpty else { return nil }
         return CompactOverviewAccountGridModel(providerModels: providerModels)
     }

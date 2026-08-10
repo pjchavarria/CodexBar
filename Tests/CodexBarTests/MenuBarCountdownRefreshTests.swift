@@ -513,6 +513,77 @@ struct MenuBarCountdownRefreshTests {
         #expect(controller._test_isMenuBarCountdownRefreshScheduled())
     }
 
+    /// The account grid draws a countdown on every row while none of the legacy reset settings are on,
+    /// so the whole wiring — apply path publishes what it drew, scheduler consumes it — has to hold or
+    /// those countdowns sit stale until an unrelated refresh.
+    @Test
+    func `account grid schedules its drawn resets without any legacy reset setting`() throws {
+        CodexBarPersonalization.compactOverviewEnabledOverrideForTesting = true
+        defer { CodexBarPersonalization.compactOverviewEnabledOverrideForTesting = nil }
+
+        let settings = testSettingsStore(suiteName: "MenuBarCountdownRefreshTests-accountGrid")
+        settings.statusChecksEnabled = false
+        settings.refreshFrequency = .manual
+        settings.mergeIcons = true
+        // Every upstream reset path off: only the grid's own countdown may arm the timer.
+        settings.menuBarShowsBrandIconWithPercent = false
+        settings.menuBarDisplayMode = .percent
+        settings.menuBarShowsResetTimeWhenExhausted = false
+        settings.menuBarShowsHighestUsage = false
+
+        let registry = ProviderRegistry.shared
+        try settings.setProviderEnabled(
+            provider: .codex,
+            metadata: #require(registry.metadata[.codex]),
+            enabled: false)
+        try settings.setProviderEnabled(
+            provider: .claude,
+            metadata: #require(registry.metadata[.claude]),
+            enabled: true)
+
+        let fetcher = UsageFetcher()
+        let store = UsageStore(
+            fetcher: fetcher,
+            browserDetection: BrowserDetection(cacheTTL: 0),
+            settings: settings)
+        let now = Date()
+        let weeklyReset = now.addingTimeInterval(3 * 24 * 3600)
+        store._setSnapshotForTesting(
+            UsageSnapshot(
+                primary: RateWindow(
+                    usedPercent: 51,
+                    windowMinutes: 300,
+                    resetsAt: now.addingTimeInterval(90),
+                    resetDescription: nil),
+                secondary: RateWindow(
+                    usedPercent: 18,
+                    windowMinutes: 10080,
+                    resetsAt: weeklyReset,
+                    resetDescription: nil),
+                updatedAt: now),
+            provider: .claude)
+
+        let controller = StatusItemController(
+            store: store,
+            settings: settings,
+            account: fetcher.loadAccountInfo(),
+            updater: DisabledUpdaterController(),
+            preferencesSelection: PreferencesSelection(),
+            statusBar: .system)
+        defer { controller.releaseStatusItemsForTesting() }
+
+        // The weekly lane is the one the bar draws a countdown for, so it is the one scheduled.
+        #expect(controller.menuBarAccountGridResetDates == [weeklyReset])
+        #expect(controller.menuBarDisplayedResetDates(for: .claude, now: now).isEmpty)
+        #expect(controller._test_isMenuBarCountdownRefreshScheduled())
+
+        // Grid off: its instants must stop arming a timer nothing on screen depends on.
+        CodexBarPersonalization.compactOverviewEnabledOverrideForTesting = false
+        controller.updateIcons()
+        #expect(controller.menuBarAccountGridResetDates.isEmpty)
+        #expect(!controller._test_isMenuBarCountdownRefreshScheduled())
+    }
+
     private func expectCustomResetTokenSchedules(
         _ layoutElement: MenuBarLayoutToken,
         legacyAbsoluteReset: Bool,

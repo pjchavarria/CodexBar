@@ -31,6 +31,10 @@ struct UsageMenuCardView: View {
             let percentStyle: PercentStyle
             let statusText: String?
             let resetText: String?
+            /// Concrete reset instant behind `resetText`, when the window has one. The card renders the
+            /// localized phrase; the menu-bar grid needs the date so it can format its own compact
+            /// countdown instead of parsing display text back into a duration.
+            let resetsAt: Date?
             let detailText: String?
             let detailLeftText: String?
             let detailRightText: String?
@@ -48,6 +52,7 @@ struct UsageMenuCardView: View {
                 percentStyle: PercentStyle,
                 statusText: String? = nil,
                 resetText: String?,
+                resetsAt: Date? = nil,
                 detailText: String?,
                 detailLeftText: String?,
                 detailRightText: String?,
@@ -64,6 +69,7 @@ struct UsageMenuCardView: View {
                 self.percentStyle = percentStyle
                 self.statusText = statusText
                 self.resetText = resetText
+                self.resetsAt = resetsAt
                 self.detailText = detailText
                 self.detailLeftText = detailLeftText
                 self.detailRightText = detailRightText
@@ -1338,6 +1344,7 @@ extension UsageMenuCardView.Model {
             percentStyle: percentStyle,
             statusText: presentation.statusText,
             resetText: presentation.resetText,
+            resetsAt: primary.resetsAt,
             detailText: presentation.detailText,
             detailLeftText: presentation.detailLeft,
             detailRightText: presentation.detailRight,
@@ -1466,6 +1473,7 @@ extension UsageMenuCardView.Model {
             percentStyle: percentStyle,
             statusText: nil,
             resetText: weeklyResetText,
+            resetsAt: weekly.resetsAt,
             detailText: weeklyDetailText,
             detailLeftText: paceDetail?.leftLabel,
             detailRightText: paceDetail?.rightLabel,
